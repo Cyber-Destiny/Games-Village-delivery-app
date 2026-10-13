@@ -58,6 +58,11 @@ export function Tracker({ initial }: { initial: OrderView }) {
   const [confetti, setConfetti] = useState(false);
   const [pending, start] = useTransition();
   const prevStatus = useRef(order.status);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 15000);
+    return () => clearInterval(t);
+  }, []);
 
   // Celebrate the moment it flips to delivered, then ask for a rating.
   useEffect(() => {
@@ -134,6 +139,19 @@ export function Tracker({ initial }: { initial: OrderView }) {
           </div>
         </div>
       </section>
+
+      {/* still searching after a few minutes */}
+      <AnimatePresence>
+        {order.status === "searching" && order.at.paid && now - new Date(order.at.paid).getTime() > 3 * 60 * 1000 ? (
+          <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mx-5 mt-4 rounded-[24px] border border-line bg-surface p-5">
+            <p className="font-semibold text-ink">All our runners are busy right now</p>
+            <p className="mt-1 text-[13.5px] leading-relaxed text-muted">You&apos;re in the queue — the next free runner gets your errand automatically. Prefer not to wait? Cancel for a full refund to your wallet.</p>
+            <Button variant="secondary" size="sm" className="mt-3" onClick={() => setCancelOpen(true)}>
+              Cancel errand
+            </Button>
+          </motion.section>
+        ) : null}
+      </AnimatePresence>
 
       {/* awaiting payment */}
       {order.status === "awaiting_payment" ? (

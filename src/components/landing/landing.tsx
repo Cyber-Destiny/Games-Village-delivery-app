@@ -350,7 +350,10 @@ export function Landing(props: Props) {
           {STEPS.map((s, i) => (
             <Reveal key={s.n} delay={i * 0.08}>
               <div className="card relative h-full overflow-hidden p-7">
-                <span className="font-display text-[56px] font-bold leading-none text-line-strong/70">{s.n}</span>
+                <div className="flex h-[112px] items-start justify-between gap-4">
+                  <span className="font-display text-[56px] font-bold leading-none text-line-strong/70">{s.n}</span>
+                  <StepArt i={i} />
+                </div>
                 <h3 className="mt-6 font-display text-[22px] font-semibold text-ink">{s.title}</h3>
                 <p className="mt-2 text-[15px] leading-relaxed text-ink-2">{s.body}</p>
               </div>
@@ -464,6 +467,60 @@ export function Landing(props: Props) {
           </p>
         </footer>
       </section>
+    </div>
+  );
+}
+
+function StepArt({ i }: { i: number }) {
+  if (i === 0)
+    return (
+      <div className="w-[150px] space-y-1.5 rounded-2xl bg-surface-2 p-2.5 ring-1 ring-line/70">
+        {["2× Bread", "Peak milk", "Eggs"].map((t, k) => (
+          <motion.div
+            key={t}
+            initial={{ opacity: 0, x: 10 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 + k * 0.12 }}
+            className="flex items-center gap-2 rounded-lg bg-surface px-2 py-1.5 text-[11.5px] font-medium text-ink-2 shadow-[var(--shadow-card)]"
+          >
+            <span className="size-1.5 rounded-full bg-primary" />
+            {t}
+          </motion.div>
+        ))}
+      </div>
+    );
+  if (i === 1)
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true }}
+        transition={{ delay: 0.3 }}
+        className="flex w-[150px] flex-col items-center rounded-2xl bg-hero px-3 py-3 text-hero-ink"
+      >
+        <span className="grid size-8 place-items-center rounded-full bg-accent text-accent-ink">
+          <BadgeCheck className="size-4" />
+        </span>
+        <span className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-accent">Shop paid</span>
+        <span className="font-display text-[18px] font-bold">₦4,650</span>
+      </motion.div>
+    );
+  return (
+    <div className="flex gap-1.5">
+      {["4", "8", "2", "7"].map((d, k) => (
+        <motion.span
+          key={k}
+          initial={{ rotateX: -90, opacity: 0 }}
+          whileInView={{ rotateX: 0, opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.3 + k * 0.1, type: "spring", stiffness: 300, damping: 18 }}
+          style={{ transformPerspective: 300 }}
+          className="grid h-11 w-9 place-items-center rounded-xl bg-hero font-display text-[20px] font-bold text-hero-ink"
+        >
+          {d}
+        </motion.span>
+      ))}
     </div>
   );
 }
