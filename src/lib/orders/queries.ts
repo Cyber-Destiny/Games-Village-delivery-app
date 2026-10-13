@@ -331,7 +331,7 @@ async function assertParticipant(orderId: string, viewer: Viewer) {
 }
 
 export async function listMessages(orderId: string, viewer: Viewer) {
-  await assertParticipant(orderId, viewer);
+  const o = await assertParticipant(orderId, viewer);
   const rows = await db
     .select({ m: messages, name: users.name, role: users.role })
     .from(messages)
@@ -339,10 +339,15 @@ export async function listMessages(orderId: string, viewer: Viewer) {
     .where(eq(messages.orderId, orderId))
     .orderBy(asc(messages.createdAt))
     .limit(200);
-  await db
-    .update(messages)
-    .set({ readAt: new Date() })
-    .where(and(eq(messages.orderId, orderId), ne(messages.senderId, viewer.id), isNull(messages.readAt)));
+  // Admins peeking at a resident↔runner chat shouldn't mark it read for them;
+  // they only clear support requests (errands with no runner yet).
+  const participant = viewer.id === o.residentId || viewer.id === o.runnerId;
+  if (participant || !o.runnerId) {
+    await db
+      .update(messages)
+      .set({ readAt: new Date() })
+      .where(and(eq(messages.orderId, orderId), ne(messages.senderId, viewer.id), isNull(messages.readAt)));
+  }
   return rows.map(({ m, name, role }) => ({
     id: m.id,
     body: m.body,

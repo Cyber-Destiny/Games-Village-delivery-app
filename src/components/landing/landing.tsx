@@ -292,7 +292,7 @@ export function Landing(props: Props) {
             transition={{ duration: 0.8, delay: 0.7 }}
             className="mt-8 flex items-center gap-3"
           >
-            <div className="flex -space-x-2">
+            <div className="flex -space-x-1.5">
               {["Musa Bello", "Chioma Eze", "Tunde Ade", "Grace Okon"].map((n) => (
                 <Avatar key={n} name={n} size={34} ring />
               ))}

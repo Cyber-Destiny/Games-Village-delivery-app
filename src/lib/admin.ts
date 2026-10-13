@@ -78,7 +78,14 @@ export async function getOverview() {
       .from(messages)
       .innerJoin(users, eq(users.id, messages.senderId))
       .innerJoin(orders, eq(orders.id, messages.orderId))
-      .where(and(isNull(messages.readAt), ne(users.role, "admin"), inArray(orders.status, [...ACTIVE_STATUSES, "delivered"]), gte(messages.createdAt, new Date(Date.now() - 86400000))))
+      .where(
+        and(
+          isNull(messages.readAt),
+          eq(users.role, "resident"),
+          isNull(orders.runnerId), // support requests: nobody but admin will read these
+          gte(messages.createdAt, new Date(Date.now() - 3 * 86400000)),
+        ),
+      )
       .groupBy(messages.orderId),
   ]);
 

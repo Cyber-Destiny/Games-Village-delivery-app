@@ -54,8 +54,10 @@ export function JobFlow({ initial, commissionPct }: { initial: OrderView; commis
   const { data, mutate } = useSWR<{ order: OrderView }>(`/api/orders/${initial.id}`, {
     fallbackData: { order: initial },
     refreshInterval: (d) => (d && ["delivered", "cancelled"].includes(d.order.status) ? 0 : 3500),
-    // The errand was reassigned or removed — go back to the dashboard.
-    onError: () => router.replace("/runner"),
+    // The errand was reassigned or removed — go back to the dashboard (but ride out network blips).
+    onError: (err: Error) => {
+      if (/not found|access/i.test(err.message)) router.replace("/runner");
+    },
   });
   const o = data?.order ?? initial;
   const [pending, start] = useTransition();
