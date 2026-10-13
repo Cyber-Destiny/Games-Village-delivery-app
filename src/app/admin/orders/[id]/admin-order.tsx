@@ -21,7 +21,7 @@ import { naira } from "@/lib/money";
 import type { OrderView } from "@/lib/orders/queries";
 import { formatPhoneLocal } from "@/lib/phone";
 import { formatDateTime } from "@/lib/time";
-import { approve, cancelOrder, markDelivered, markManual, reassignOrder } from "../../actions";
+import { approve, cancelOrder, markDelivered, markManual, reassignOrder, retry } from "../../actions";
 
 type FreeRunner = { id: string; name: string; online: boolean };
 
@@ -171,11 +171,16 @@ export function AdminOrder({ initial, runners }: { initial: OrderView; runners: 
                   {o.vendorPayout.status.replace("_", " ")}
                 </Badge>
               </div>
-              {["pending_approval", "failed", "processing"].includes(o.vendorPayout.status) ? (
+              {!final && ["pending_approval", "failed", "reversed"].includes(o.vendorPayout.status) ? (
                 <div className="mt-4 flex gap-2">
                   {o.vendorPayout.status === "pending_approval" ? (
                     <Button size="sm" loading={pending} onClick={() => act(() => approve(o.vendorPayout!.id), "Transfer sent")}>
                       <Check className="size-4" /> Approve transfer
+                    </Button>
+                  ) : null}
+                  {o.vendorPayout.status !== "pending_approval" ? (
+                    <Button size="sm" loading={pending} onClick={() => act(() => retry(o.vendorPayout!.id), "Retrying transfer")}>
+                      Retry transfer
                     </Button>
                   ) : null}
                   <Button size="sm" variant="secondary" disabled={pending} onClick={() => act(() => markManual(o.vendorPayout!.id), "Marked as paid")}>

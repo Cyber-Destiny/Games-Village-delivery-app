@@ -14,22 +14,41 @@ export function paystackTestKey(): boolean {
   return (process.env.PAYSTACK_SECRET_KEY ?? "").startsWith("sk_test_");
 }
 
-export class PaystackError extends Error {}
+/**
+ * `definite` is true only when Paystack answered and said no (4xx). Timeouts,
+ * network errors and 5xx are ambiguous: the request may still have gone through.
+ */
+export class PaystackError extends Error {
+  constructor(
+    message: string,
+    readonly definite: boolean,
+    readonly httpStatus?: number,
+  ) {
+    super(message);
+    this.name = "PaystackError";
+  }
+}
 
 async function call<T>(path: string, init?: { method?: string; body?: unknown }): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    method: init?.method ?? "GET",
-    headers: {
-      Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: init?.body ? JSON.stringify(init.body) : undefined,
-    signal: AbortSignal.timeout(15000),
-    cache: "no-store",
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      method: init?.method ?? "GET",
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: init?.body ? JSON.stringify(init.body) : undefined,
+      signal: AbortSignal.timeout(15000),
+      cache: "no-store",
+    });
+  } catch (err) {
+    throw new PaystackError(err instanceof Error ? err.message : "Network error", false);
+  }
   const json = (await res.json().catch(() => null)) as { status?: boolean; message?: string; data?: T } | null;
   if (!res.ok || !json?.status) {
-    throw new PaystackError(json?.message || `Paystack request failed (${res.status})`);
+    const definite = res.status >= 400 && res.status < 500;
+    throw new PaystackError(json?.message || `Paystack request failed (${res.status})`, definite, res.status);
   }
   return json.data as T;
 }
@@ -133,7 +152,7 @@ export async function listBanks(): Promise<Bank[]> {
 }
 
 export async function resolveAccount(accountNumber: string, bankCode: string): Promise<{ accountName: string }> {
-  if (!/^\d{10}$/.test(accountNumber)) throw new PaystackError("Account number must be 10 digits.");
+  if (!/^\d{10}$/.test(accountNumber)) throw new PaystackError("Account number must be 10 digits.", true);
   if (!paystackLive()) {
     return { accountName: `DEMO ACCOUNT ${accountNumber.slice(-4)}` };
   }
@@ -188,12 +207,18 @@ export async function initiateTransfer(input: {
     }
     return { status: data.status === "success" ? "success" : data.status === "failed" ? "failed" : "pending", transferCode: data.transfer_code };
   } catch (err) {
-    return { status: "failed", transferCode: null, message: err instanceof Error ? err.message : "Transfer failed" };
+    // Only a clear "no" from Paystack is a failure. Anything ambiguous stays pending and
+    // is settled later by the webhook or by verifying the reference.
+    if (err instanceof PaystackError && err.definite) return { status: "failed", transferCode: null, message: err.message };
+    console.error("[paystack] ambiguous transfer response, will verify later", err);
+    return { status: "pending", transferCode: null };
   }
 }
 
 export async function verifyTransfer(reference: string): Promise<"success" | "failed" | "reversed" | "pending"> {
   const data = await call<{ status: string }>(`/transfer/verify/${encodeURIComponent(reference)}`);
   if (data.status === "success" || data.status === "failed" || data.status === "reversed") return data.status;
-  return "pending";
+  // Terminal statuses that mean the money never left.
+  if (["abandoned", "blocked", "rejected"].includes(data.status)) return "failed";
+  return "pending"; // pending, received, processing, otp …
 }

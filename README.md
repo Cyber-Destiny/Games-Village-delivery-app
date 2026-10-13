@@ -34,12 +34,14 @@ Requirements: Node 20.9+ and a Postgres database (local, or a free one from [Neo
 
 ```bash
 npm install
-cp .env.example .env        # then set DATABASE_URL
+cp .env.example .env        # then set DATABASE_URL, and DEMO_SHOW_OTP=true
 npm run setup               # creates tables + demo data
 npm run dev                 # http://localhost:3000
 ```
 
-With no Paystack key the app runs in **demo mode**: payments go through a fake checkout and shop transfers "settle" after a few seconds. Login codes are shown on screen (`DEMO_SHOW_OTP=true`).
+With no Paystack key the app runs in **demo mode**: payments go through a fake checkout and shop transfers "settle" after a few seconds. With `DEMO_SHOW_OTP=true` the login code is shown on screen (otherwise it's printed in the terminal).
+
+> ⚠️ `DEMO_SHOW_OTP=true` lets anyone sign in as anyone — only use it for a private demo. It switches itself off as soon as SMS (Termii) is configured.
 
 Demo accounts (all made up — sign in with these numbers):
 
@@ -80,7 +82,7 @@ Create a Postgres database (Neon free tier is plenty to start). Use the **pooled
 Paystack charges a fee on every payment; build that into your service fees in `/admin/settings`.
 
 ### 4. SMS login codes (Termii)
-Set `SMS_PROVIDER=termii`, `TERMII_API_KEY`, and `TERMII_SENDER_ID` (register a sender ID with Termii; use `TERMII_CHANNEL=dnd` so codes reach DND numbers). Set `DEMO_SHOW_OTP=false` in production.
+Set `SMS_PROVIDER=termii`, `TERMII_API_KEY`, and `TERMII_SENDER_ID` (register a sender ID with Termii; use `TERMII_CHANNEL=dnd` so codes reach DND numbers). Once this is set, login codes are only ever sent by SMS.
 
 ### 5. Push notifications (recommended for runners)
 ```bash
@@ -99,7 +101,7 @@ Put the keys in `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`. Runners 
 | `PAYSTACK_SECRET_KEY` | for payments | Empty = demo mode |
 | `PAYSTACK_EMAIL_DOMAIN` | | Used to build an email for residents who haven't added one |
 | `SMS_PROVIDER`, `TERMII_*` | for SMS | Login codes and key alerts |
-| `DEMO_SHOW_OTP` | | `true` shows login codes on screen. **Set `false` in production.** |
+| `DEMO_SHOW_OTP` | | `true` shows login codes on screen (demo only). Always off once SMS is configured. |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | for push | Web push notifications |
 | `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_ESTATE_NAME` | | Rename the app / estate |
 

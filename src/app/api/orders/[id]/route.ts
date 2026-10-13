@@ -6,7 +6,8 @@ export const GET = withUser<{ params: Promise<{ id: string }> }>(async (_req, us
   const { id } = await params;
   await tick();
   let order = await getOrderForViewer(id, user);
-  if (order.status === "awaiting_payment" && order.viewerRole === "resident") {
+  // Catch payments whose webhook/redirect we missed (order checkout or a top-up).
+  if ((order.status === "awaiting_payment" || order.status === "at_vendor") && order.viewerRole === "resident") {
     const pending = await latestPendingPayment(id);
     if (pending && Date.now() - pending.createdAt.getTime() > 8000) {
       await checkPendingPayment(pending.reference);

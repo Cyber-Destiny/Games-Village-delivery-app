@@ -93,6 +93,9 @@ export function PayoutsView({ data, mode }: { data: Data; mode: "demo" | "test" 
                             {p.accountName} · {p.bankName} {p.accountNumber ? `••••${p.accountNumber.slice(-4)}` : ""}
                           </p>
                           {p.failureReason ? <p className="mt-1 text-[12.5px] text-danger">{p.failureReason}</p> : null}
+                          {p.type === "vendor" && p.status === "pending_approval" ? (
+                            <p className="mt-1 text-[12.5px] text-accent-soft-ink">Entered by the runner — check the name matches the shop and look at the receipt before approving.</p>
+                          ) : null}
                         </div>
                         <Badge tone={tone(p.status)}>{p.status.replace("_", " ")}</Badge>
                       </div>
@@ -108,11 +111,9 @@ export function PayoutsView({ data, mode }: { data: Data; mode: "demo" | "test" 
                             <Check className="size-3.5" /> Approve & send
                           </Button>
                         )}
-                        {p.type !== "withdrawal" || !failed ? (
-                          <Button size="sm" variant="secondary" disabled={pending} onClick={() => run(() => markManual(p.id), "Recorded as paid")}>
-                            Paid another way
-                          </Button>
-                        ) : null}
+                        <Button size="sm" variant="secondary" disabled={pending} onClick={() => run(() => markManual(p.id), "Recorded as paid")}>
+                          Paid another way
+                        </Button>
                         {!failed ? (
                           <Button size="sm" variant="ghost" disabled={pending} onClick={() => setRejecting(p)}>
                             <X className="size-3.5" /> Decline

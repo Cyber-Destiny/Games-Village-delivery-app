@@ -20,7 +20,7 @@ import { UserError } from "../errors";
 import { deliveryCode, orderCode, reference } from "../ids";
 import { naira } from "../money";
 import { notify } from "../notify";
-import { initializeTransaction, paystackLive, resolveAccount, verifyTransaction } from "../paystack";
+import { initializeTransaction, PaystackError, paystackLive, resolveAccount, verifyTransaction, verifyTransfer } from "../paystack";
 import { applyTransferOutcome, reconcileProcessingPayouts, sendTransfer, settleMockPayouts } from "../payouts";
 import { getSettings, isOpenNow } from "../settings";
 import { computeQuote } from "./quote";
@@ -32,6 +32,7 @@ const ACCEPT_TIMEOUT_MS = 3 * 60 * 1000;
 const RUNNER_STALE_MS = 10 * 60 * 1000;
 const UNPAID_EXPIRY_MS = 2 * 60 * 60 * 1000;
 const MAX_CODE_ATTEMPTS = 5;
+const DECLINE_COOLOFF_MS = 3 * 60 * 1000;
 
 // ── helpers ──────────────────────────────────────────────────
 
@@ -223,7 +224,7 @@ export async function createOrder(user: User, raw: CreateOrderInput): Promise<{ 
     });
     return { orderId: result.order.id, payUrl: url };
   } catch (err) {
-    await cancelOrderInternal(result.order.id, "Payment could not start", null);
+    await cancelOrderInternal(result.order.id, "Payment could not start", null, { allowed: ["awaiting_payment"] });
     console.error("[paystack] initialize failed", err);
     throw new UserError("We couldn't start the payment. Please try again in a moment.");
   }
@@ -249,7 +250,13 @@ export async function resumePayment(user: User, orderId: string): Promise<string
 // ── payments ─────────────────────────────────────────────────
 
 export async function markPaymentSuccess(ref: string, info: { amount: number; channel?: string | null; raw?: unknown }) {
+  // Read which order this is for without a lock, so we can take locks in the
+  // same order everywhere (order → payment → topup) and avoid deadlocks.
+  const [peek] = await db.select({ orderId: payments.orderId }).from(payments).where(eq(payments.reference, ref));
+  if (!peek) return null;
+
   const outcome = await db.transaction(async (tx) => {
+    const order = peek.orderId ? await lockOrder(tx, peek.orderId) : null;
     const [payment] = await tx.select().from(payments).where(eq(payments.reference, ref)).for("update");
     if (!payment) return null;
     if (payment.status === "success") return { payment, fresh: false };
@@ -263,8 +270,7 @@ export async function markPaymentSuccess(ref: string, info: { amount: number; ch
       .set({ status: "success", paidAt: new Date(), channel: info.channel ?? null, raw: info.raw ?? null })
       .where(eq(payments.id, payment.id));
 
-    if (payment.purpose === "order" && payment.orderId) {
-      const order = await lockOrder(tx, payment.orderId);
+    if (payment.purpose === "order" && order) {
       if (order.status === "awaiting_payment") {
         await setStatus(tx, order, "searching", { paidAt: new Date() });
         await tx.update(users).set({ lastOrderAt: new Date() }).where(eq(users.id, order.residentId));
@@ -276,15 +282,15 @@ export async function markPaymentSuccess(ref: string, info: { amount: number; ch
       }
     }
 
-    if (payment.purpose === "topup" && payment.topupId) {
+    if (payment.purpose === "topup" && payment.topupId && order) {
       const [t] = await tx.select().from(topups).where(eq(topups.id, payment.topupId)).for("update");
-      const order = await lockOrder(tx, payment.orderId!);
-      if (t && t.status !== "paid" && order.status === "at_vendor") {
+      if (t && (t.status === "pending" || t.status === "approved") && order.status === "at_vendor" && order.actualCost === null) {
         await tx.update(topups).set({ status: "paid", resolvedAt: new Date() }).where(eq(topups.id, t.id));
         await tx.update(orders).set({ topupTotal: order.topupTotal + t.amount, updatedAt: new Date() }).where(eq(orders.id, order.id));
         await addEvent(tx, order.id, "topup_paid", `Extra ${naira(t.amount)} paid`);
       } else {
         await walletCredit(tx, payment.userId, payment.amount, "refund", { orderId: order.id, note: "Top-up no longer needed" });
+        await addEvent(tx, order.id, "late_payment", "Extra payment arrived late — moved to wallet");
       }
     }
     return { payment, fresh: true };
@@ -355,22 +361,31 @@ async function tryAssign(orderId: string): Promise<"assigned" | "no-runners" | "
       .limit(1)
       .for("update", { of: runnerProfiles, skipLocked: true });
 
-    if (!runner) {
+    let picked = runner;
+    if (!picked) {
       if (!declined.length) return { r: "no-runners" as const };
-      const [any] = await tx
-        .select({ id: runnerProfiles.userId })
+      // Only runners who passed on this errand are free. After a short cool-off,
+      // offer it to them again rather than leaving it stuck in the queue forever.
+      const coolingOff = Date.now() - order.updatedAt.getTime() < DECLINE_COOLOFF_MS;
+      const [again] = await tx
+        .select({ id: runnerProfiles.userId, name: users.name })
         .from(runnerProfiles)
         .innerJoin(users, eq(users.id, runnerProfiles.userId))
         .where(and(...base))
-        .limit(1);
-      return { r: any ? ("skip" as const) : ("no-runners" as const) };
+        .orderBy(sql`${runnerProfiles.lastAssignedAt} asc nulls first`)
+        .limit(1)
+        .for("update", { of: runnerProfiles, skipLocked: true });
+      if (!again) return { r: "no-runners" as const };
+      if (coolingOff) return { r: "skip" as const };
+      picked = again;
     }
+    const assignee = picked;
 
     const now = new Date();
-    await setStatus(tx, order, "assigned", { runnerId: runner.id, assignedAt: now });
-    await tx.update(runnerProfiles).set({ lastAssignedAt: now }).where(eq(runnerProfiles.userId, runner.id));
-    await addEvent(tx, order.id, "assigned", `${firstName(runner.name)} was assigned`);
-    return { r: "assigned" as const, order, runner };
+    await setStatus(tx, order, "assigned", { runnerId: assignee.id, assignedAt: now, declinedRunnerIds: runner ? declined : [] });
+    await tx.update(runnerProfiles).set({ lastAssignedAt: now }).where(eq(runnerProfiles.userId, assignee.id));
+    await addEvent(tx, order.id, "assigned", `${firstName(assignee.name)} was assigned`);
+    return { r: "assigned" as const, order, runner: assignee };
   });
 
   if (res.r === "assigned") {
@@ -400,7 +415,7 @@ export async function dispatch() {
     .from(orders)
     .where(eq(orders.status, "searching"))
     .orderBy(asc(orders.paidAt))
-    .limit(25);
+    .limit(60);
   for (const w of waiting) {
     const r = await tryAssign(w.id);
     if (r === "no-runners") break;
@@ -442,7 +457,10 @@ async function expireStaleUnpaid() {
     .from(orders)
     .where(and(eq(orders.status, "awaiting_payment"), lt(orders.createdAt, new Date(Date.now() - UNPAID_EXPIRY_MS))))
     .limit(20);
-  for (const s of stale) await cancelOrderInternal(s.id, "Payment not completed", null);
+  for (const s of stale) {
+    // Skips orders that got paid between the select and the lock.
+    await cancelOrderInternal(s.id, "Payment not completed", null, { allowed: ["awaiting_payment"] }).catch(() => null);
+  }
 }
 
 let lastTick = 0;
@@ -461,17 +479,45 @@ export async function tick() {
 
 // ── cancel ───────────────────────────────────────────────────
 
-async function cancelOrderInternal(orderId: string, reason: string, actorId: string | null, refundOverride?: number) {
+type CancelOpts = { allowed?: OrderStatus[]; refund?: number };
+
+async function cancelOrderInternal(orderId: string, reason: string, actorId: string | null, opts: CancelOpts = {}) {
   const res = await db.transaction(async (tx) => {
     const order = await lockOrder(tx, orderId);
     if (order.status === "cancelled" || order.status === "delivered") return null;
-    const refund = refundOverride ?? amountPaidIn(order);
+    if (opts.allowed && !opts.allowed.includes(order.status)) {
+      throw new UserError("This errand has moved on and can't be cancelled from here.");
+    }
+
+    // Shop transfers for this errand: in-flight ones block the cancel, waiting ones are withdrawn.
+    const shopPayouts = await tx
+      .select()
+      .from(payouts)
+      .where(and(eq(payouts.orderId, order.id), eq(payouts.type, "vendor")))
+      .for("update");
+    if (shopPayouts.some((p) => p.status === "processing")) {
+      throw new UserError("A transfer to the shop is in progress. Wait a moment for it to finish, then cancel.");
+    }
+    // Waiting or failed shop payments are withdrawn so nobody can approve/retry them later.
+    for (const p of shopPayouts.filter((p) => ["pending_approval", "failed", "reversed"].includes(p.status))) {
+      await tx
+        .update(payouts)
+        .set({ status: "rejected", failureReason: "Errand cancelled", completedAt: new Date() })
+        .where(eq(payouts.id, p.id));
+    }
+    const shopPaid = shopPayouts.filter((p) => p.status === "success" || p.status === "manual").reduce((a, p) => a + p.amount, 0);
+    const maxRefund = amountPaidIn(order);
+    const refund = Math.min(opts.refund ?? Math.max(0, maxRefund - shopPaid), maxRefund);
+
     await setStatus(tx, order, "cancelled", { cancelledAt: new Date(), cancelReason: reason });
     await tx
       .update(payments)
       .set({ status: "abandoned" })
       .where(and(eq(payments.orderId, order.id), eq(payments.status, "pending")));
-    await tx.update(topups).set({ status: "declined", resolvedAt: new Date() }).where(and(eq(topups.orderId, order.id), eq(topups.status, "pending")));
+    await tx
+      .update(topups)
+      .set({ status: "declined", resolvedAt: new Date() })
+      .where(and(eq(topups.orderId, order.id), inArray(topups.status, ["pending", "approved"])));
     if (refund > 0) {
       await walletCredit(tx, order.residentId, refund, "refund", { orderId: order.id, note: `Refund for #${order.code}` });
     }
@@ -495,17 +541,15 @@ export async function cancelByResident(user: User, orderId: string, reason: stri
   if (!RESIDENT_CANCELLABLE.includes(order.status)) {
     throw new UserError("Your runner is already buying your items, so this can't be cancelled. Chat with them instead.");
   }
-  return cancelOrderInternal(orderId, reason || "Cancelled by resident", user.id);
+  return cancelOrderInternal(orderId, reason || "Cancelled by resident", user.id, { allowed: RESIDENT_CANCELLABLE });
 }
 
-export async function cancelByAdmin(admin: User, orderId: string, reason: string, refund: number) {
-  if (refund < 0) throw new UserError("Refund can't be negative.");
-  return cancelOrderInternal(orderId, reason || "Cancelled by admin", admin.id, refund);
+/** `refund` is capped at what the resident paid in. Omit it to refund everything not already paid to the shop. */
+export async function cancelByAdmin(admin: User, orderId: string, reason: string, refund?: number) {
+  if (refund !== undefined && refund < 0) throw new UserError("Refund can't be negative.");
+  return cancelOrderInternal(orderId, reason || "Cancelled by admin", admin.id, { refund });
 }
 
-export function defaultAdminRefund(order: Order, vendorPaid: number) {
-  return Math.max(0, amountPaidIn(order) - vendorPaid);
-}
 
 // ── runner flow ──────────────────────────────────────────────
 
@@ -592,11 +636,15 @@ export async function submitPurchase(runner: User, orderId: string, raw: z.infer
     const order = await lockRunnerOrder(tx, runner, orderId, ["at_vendor"]);
     const available = order.budget + order.topupTotal;
 
-    const [active] = await tx
+    const shopPayouts = await tx
       .select()
       .from(payouts)
-      .where(and(eq(payouts.orderId, order.id), eq(payouts.type, "vendor"), inArray(payouts.status, ["pending_approval", "processing", "success", "manual"])));
-    if (active) throw new UserError("The shop payment is already in progress.");
+      .where(and(eq(payouts.orderId, order.id), eq(payouts.type, "vendor")))
+      .for("update");
+    if (shopPayouts.some((p) => ["pending_approval", "processing", "success", "manual"].includes(p.status))) {
+      throw new UserError("The shop payment is already in progress.");
+    }
+    if (input.actualCost > 0 && !input.receiptId) throw new UserError("Add a photo of the receipt or the items first.");
 
     if (input.actualCost > available) {
       const extra = input.actualCost - available;
@@ -623,6 +671,14 @@ export async function submitPurchase(runner: User, orderId: string, raw: z.infer
     if (!usePartner && !input.account) throw new UserError("Enter the shop's bank details so we can pay them.");
 
     const auto = !!(usePartner && vendor?.isPartner && s.autoPayPartnerVendors);
+    // Earlier failed attempts are superseded by this one, so they can never be retried as well.
+    const superseded = shopPayouts.filter((p) => p.status === "failed" || p.status === "reversed").map((p) => p.id);
+    if (superseded.length) {
+      await tx
+        .update(payouts)
+        .set({ status: "rejected", failureReason: "Replaced by a new payment attempt" })
+        .where(inArray(payouts.id, superseded));
+    }
     const [p] = await tx
       .insert(payouts)
       .values({
@@ -810,59 +866,93 @@ export async function adminMarkDelivered(admin: User, orderId: string) {
 // ── top-ups ──────────────────────────────────────────────────
 
 export async function respondToTopup(user: User, topupId: string, approve: boolean): Promise<{ payUrl: string | null }> {
-  const [t] = await db.select().from(topups).where(eq(topups.id, topupId));
-  if (!t) throw new UserError("Request not found.");
-  const [order] = await db.select().from(orders).where(eq(orders.id, t.orderId));
-  if (!order || order.residentId !== user.id) throw new UserError("Request not found.");
-  if (t.status !== "pending") throw new UserError("You've already answered this.");
-  if (order.status !== "at_vendor") throw new UserError("This errand has moved on.");
+  const [t0] = await db.select().from(topups).where(eq(topups.id, topupId));
+  if (!t0) throw new UserError("Request not found.");
+
+  /** Locks order → topup and re-checks everything the decision depends on. */
+  async function lockFresh(tx: Tx) {
+    const o = await lockOrder(tx, t0.orderId);
+    const [t] = await tx.select().from(topups).where(eq(topups.id, topupId)).for("update");
+    if (o.residentId !== user.id || !t) throw new UserError("Request not found.");
+    // "approved" means a card checkout was started but not finished — they can still change their mind.
+    if (t.status !== "pending" && t.status !== "approved") throw new UserError("You've already answered this.");
+    if (o.status !== "at_vendor" || o.actualCost !== null) throw new UserError("This errand has moved on.");
+    return { o, t };
+  }
 
   if (!approve) {
-    await db.transaction(async (tx) => {
-      await tx.update(topups).set({ status: "declined", resolvedAt: new Date() }).where(eq(topups.id, t.id));
-      await addEvent(tx, order.id, "topup_declined", "You declined the extra amount — runner will adjust", user.id);
+    const { o } = await db.transaction(async (tx) => {
+      const locked = await lockFresh(tx);
+      await tx.update(topups).set({ status: "declined", resolvedAt: new Date() }).where(eq(topups.id, topupId));
+      await tx
+        .update(payments)
+        .set({ status: "abandoned" })
+        .where(and(eq(payments.topupId, topupId), eq(payments.status, "pending")));
+      await addEvent(tx, locked.o.id, "topup_declined", "You declined the extra amount — runner will adjust", user.id);
+      return locked;
     });
-    if (order.runnerId) {
-      await notify(order.runnerId, {
+    if (o.runnerId) {
+      await notify(o.runnerId, {
         title: "Extra money declined",
-        body: `Order #${order.code}: stay within ${naira(order.budget + order.topupTotal)}. Remove something or chat with the resident.`,
-        url: `/runner/jobs/${order.id}`,
+        body: `Order #${o.code}: stay within ${naira(o.budget + o.topupTotal)}. Remove something or chat with the resident.`,
+        url: `/runner/jobs/${o.id}`,
       });
     }
     return { payUrl: null };
   }
 
-  const [fresh] = await db.select({ walletBalance: users.walletBalance }).from(users).where(eq(users.id, user.id));
-  if ((fresh?.walletBalance ?? 0) >= t.amount) {
-    await db.transaction(async (tx) => {
-      const o = await lockOrder(tx, order.id);
-      await walletDebit(tx, user.id, t.amount, "order_payment", { orderId: o.id, note: `Extra for #${o.code}` });
-      await tx.update(topups).set({ status: "paid", resolvedAt: new Date() }).where(eq(topups.id, t.id));
-      await tx.update(orders).set({ topupTotal: o.topupTotal + t.amount, updatedAt: new Date() }).where(eq(orders.id, o.id));
-      await addEvent(tx, o.id, "topup_paid", `Extra ${naira(t.amount)} paid from wallet`, user.id);
-    });
-    if (order.runnerId) {
-      await notify(order.runnerId, {
+  // Pay from the wallet when it covers it (all checks repeated under the lock).
+  const paidFromWallet = await db.transaction(async (tx) => {
+    const { o, t } = await lockFresh(tx);
+    const [u] = await tx.select({ walletBalance: users.walletBalance }).from(users).where(eq(users.id, user.id));
+    if ((u?.walletBalance ?? 0) < t.amount) return null;
+    await walletDebit(tx, user.id, t.amount, "order_payment", { orderId: o.id, note: `Extra for #${o.code}` });
+    await tx.update(topups).set({ status: "paid", resolvedAt: new Date() }).where(eq(topups.id, t.id));
+    await tx
+      .update(payments)
+      .set({ status: "abandoned" })
+      .where(and(eq(payments.topupId, t.id), eq(payments.status, "pending")));
+    await tx.update(orders).set({ topupTotal: o.topupTotal + t.amount, updatedAt: new Date() }).where(eq(orders.id, o.id));
+    await addEvent(tx, o.id, "topup_paid", `Extra ${naira(t.amount)} paid from wallet`, user.id);
+    return o;
+  });
+  if (paidFromWallet) {
+    if (paidFromWallet.runnerId) {
+      await notify(paidFromWallet.runnerId, {
         title: "Extra money approved",
-        body: `Order #${order.code}: confirm the purchase again.`,
-        url: `/runner/jobs/${order.id}`,
+        body: `Order #${paidFromWallet.code}: confirm the purchase again.`,
+        url: `/runner/jobs/${paidFromWallet.id}`,
       });
     }
     return { payUrl: null };
   }
 
+  // Otherwise start (or restart) a card/transfer checkout.
   const ref = reference("pay");
-  await db.transaction(async (tx) => {
-    await tx.update(topups).set({ status: "approved" }).where(eq(topups.id, t.id));
-    await tx.insert(payments).values({ userId: user.id, orderId: order.id, topupId: t.id, purpose: "topup", amount: t.amount, reference: ref });
+  const { o, t } = await db.transaction(async (tx) => {
+    const locked = await lockFresh(tx);
+    await tx
+      .update(payments)
+      .set({ status: "abandoned" })
+      .where(and(eq(payments.topupId, locked.t.id), eq(payments.status, "pending")));
+    await tx.update(topups).set({ status: "approved" }).where(eq(topups.id, locked.t.id));
+    await tx.insert(payments).values({ userId: user.id, orderId: locked.o.id, topupId: locked.t.id, purpose: "topup", amount: locked.t.amount, reference: ref });
+    return locked;
   });
-  const { url } = await initializeTransaction({
-    email: payEmail(user),
-    amount: t.amount,
-    reference: ref,
-    metadata: { orderId: order.id, topupId: t.id, purpose: "topup" },
-  });
-  return { payUrl: url };
+  try {
+    const { url } = await initializeTransaction({
+      email: payEmail(user),
+      amount: t.amount,
+      reference: ref,
+      metadata: { orderId: o.id, topupId: t.id, purpose: "topup" },
+    });
+    return { payUrl: url };
+  } catch (err) {
+    console.error("[paystack] topup initialize failed", err);
+    await db.update(topups).set({ status: "pending" }).where(and(eq(topups.id, t.id), eq(topups.status, "approved")));
+    await db.update(payments).set({ status: "abandoned" }).where(eq(payments.reference, ref));
+    throw new UserError("We couldn't start the payment. Please try again.");
+  }
 }
 
 // ── rating ───────────────────────────────────────────────────
@@ -931,20 +1021,48 @@ export async function adminReassign(admin: User, orderId: string, runnerId: stri
   }
 }
 
+/** Locks the payout (and its errand first, for vendor payouts — same lock order as cancel). */
+async function lockPayout(tx: Tx, payoutId: string) {
+  const [peek] = await tx.select({ orderId: payouts.orderId }).from(payouts).where(eq(payouts.id, payoutId));
+  const order = peek?.orderId ? await lockOrder(tx, peek.orderId) : null;
+  const [row] = await tx.select().from(payouts).where(eq(payouts.id, payoutId)).for("update");
+  if (!row) throw new UserError("Payout not found.");
+  return { row, order };
+}
+
+/** A shop may only be paid once per errand, and never for a cancelled errand. */
+async function assertShopPayable(tx: Tx, row: typeof payouts.$inferSelect, order: Order | null) {
+  if (row.type !== "vendor") return;
+  if (!order || order.status === "cancelled") throw new UserError("This errand was cancelled — decline this payout instead.");
+  const [sibling] = await tx
+    .select({ id: payouts.id })
+    .from(payouts)
+    .where(
+      and(
+        eq(payouts.orderId, order.id),
+        eq(payouts.type, "vendor"),
+        sql`${payouts.id} <> ${row.id}`,
+        inArray(payouts.status, ["pending_approval", "processing", "success", "manual"]),
+      ),
+    );
+  if (sibling) throw new UserError("Another payment to this shop is already in progress or done.");
+}
+
 export async function approvePayout(admin: User, payoutId: string) {
-  const [p] = await db
-    .update(payouts)
-    .set({ status: "processing", approvedBy: admin.id })
-    .where(and(eq(payouts.id, payoutId), eq(payouts.status, "pending_approval")))
-    .returning();
-  if (!p) throw new UserError("This payout isn't waiting for approval.");
+  const p = await db.transaction(async (tx) => {
+    const { row, order } = await lockPayout(tx, payoutId);
+    if (row.status !== "pending_approval") throw new UserError("This payout isn't waiting for approval.");
+    await assertShopPayable(tx, row, order);
+    await tx.update(payouts).set({ status: "processing", approvedBy: admin.id }).where(eq(payouts.id, row.id));
+    return row;
+  });
   await sendTransfer(p.id);
 }
 
 export async function rejectPayout(admin: User, payoutId: string, note: string) {
   const p = await db.transaction(async (tx) => {
-    const [row] = await tx.select().from(payouts).where(eq(payouts.id, payoutId)).for("update");
-    if (!row || row.status !== "pending_approval") throw new UserError("This payout isn't waiting for approval.");
+    const { row } = await lockPayout(tx, payoutId);
+    if (row.status !== "pending_approval") throw new UserError("This payout isn't waiting for approval.");
     await tx
       .update(payouts)
       .set({ status: "rejected", approvedBy: admin.id, failureReason: note || "Rejected", completedAt: new Date() })
@@ -953,7 +1071,7 @@ export async function rejectPayout(admin: User, payoutId: string, note: string) 
       await walletCredit(tx, row.userId, row.amount, "withdrawal_reversal", { payoutId: row.id, note: "Withdrawal declined" });
     }
     if (row.type === "vendor" && row.orderId) {
-      await tx.update(orders).set({ actualCost: null }).where(eq(orders.id, row.orderId));
+      await tx.update(orders).set({ actualCost: null }).where(and(eq(orders.id, row.orderId), eq(orders.status, "at_vendor")));
       await addEvent(tx, row.orderId, "vendor_payment_rejected", `Admin declined the shop transfer${note ? `: ${note}` : ""}`, admin.id);
     }
     return row;
@@ -963,17 +1081,22 @@ export async function rejectPayout(admin: User, payoutId: string, note: string) 
   }
 }
 
-/** Admin paid this outside Paystack (cash, POS, own app). */
+/**
+ * Admin paid this outside Paystack (cash, POS, own banking app).
+ * Not allowed while a transfer is in flight, or for failed runner payouts /
+ * withdrawals (their money was already released back), to avoid paying twice.
+ */
 export async function markPayoutManual(admin: User, payoutId: string) {
   const p = await db.transaction(async (tx) => {
-    const [row] = await tx.select().from(payouts).where(eq(payouts.id, payoutId)).for("update");
-    if (!row || !["pending_approval", "failed", "processing"].includes(row.status)) {
-      throw new UserError("This payout can't be marked as paid.");
+    const { row, order } = await lockPayout(tx, payoutId);
+    const ok = row.status === "pending_approval" || (row.type === "vendor" && (row.status === "failed" || row.status === "reversed"));
+    if (!ok) {
+      throw new UserError(
+        row.status === "processing" ? "A transfer is still in flight — wait for it to finish first." : "This payout can't be marked as paid.",
+      );
     }
-    await tx
-      .update(payouts)
-      .set({ status: "manual", approvedBy: admin.id, completedAt: new Date() })
-      .where(eq(payouts.id, row.id));
+    await assertShopPayable(tx, row, order);
+    await tx.update(payouts).set({ status: "manual", approvedBy: admin.id, completedAt: new Date() }).where(eq(payouts.id, row.id));
     if (row.type === "vendor" && row.orderId) {
       await addEvent(tx, row.orderId, "vendor_paid", `Shop paid ${naira(row.amount)} (recorded by admin)`, admin.id);
     }
@@ -985,17 +1108,43 @@ export async function markPayoutManual(admin: User, payoutId: string) {
 }
 
 export async function retryPayout(admin: User, payoutId: string) {
-  const [existing] = await db.select({ type: payouts.type }).from(payouts).where(eq(payouts.id, payoutId));
+  const [existing] = await db.select().from(payouts).where(eq(payouts.id, payoutId));
+  if (!existing) throw new UserError("Payout not found.");
   // Runner earnings are released when a payout fails, so a fresh "Pay" picks them up instead.
-  if (existing?.type === "runner") throw new UserError("Use “Pay now” on the runner instead.");
+  if (existing.type === "runner") throw new UserError("Use “Pay now” on the runner instead.");
   // Failed withdrawals are refunded to the wallet, so the resident simply requests again.
-  if (existing?.type === "withdrawal") throw new UserError("The money went back to their wallet — they can request again.");
-  const [p] = await db
-    .update(payouts)
-    .set({ status: "processing", reference: reference("po"), transferCode: null, failureReason: null, approvedBy: admin.id, completedAt: null })
-    .where(and(eq(payouts.id, payoutId), inArray(payouts.status, ["failed", "reversed"])))
-    .returning();
-  if (!p) throw new UserError("Only failed payouts can be retried.");
+  if (existing.type === "withdrawal") throw new UserError("The money went back to their wallet — they can request again.");
+
+  // Before sending again under a new reference, make sure the old transfer really didn't go out.
+  if (paystackLive()) {
+    let status: Awaited<ReturnType<typeof verifyTransfer>> | "unknown" = "unknown";
+    try {
+      status = await verifyTransfer(existing.reference);
+    } catch (err) {
+      if (err instanceof PaystackError && err.definite) status = "failed"; // Paystack never saw it
+    }
+    if (status === "success") {
+      await db
+        .update(payouts)
+        .set({ status: "success", completedAt: new Date(), failureReason: null })
+        .where(and(eq(payouts.id, existing.id), inArray(payouts.status, ["failed", "reversed"])));
+      if (existing.orderId) await addEvent(db, existing.orderId, "vendor_paid", `Shop paid ${naira(existing.amount)} (confirmed with Paystack)`, admin.id);
+      throw new UserError("Paystack shows this transfer actually went through — marked as paid.");
+    }
+    if (status === "pending" || status === "unknown") throw new UserError("Paystack still shows this transfer as pending. Try again in a few minutes.");
+  }
+
+  const p = await db.transaction(async (tx) => {
+    const { row, order } = await lockPayout(tx, payoutId);
+    if (row.status !== "failed" && row.status !== "reversed") throw new UserError("Only failed payouts can be retried.");
+    await assertShopPayable(tx, row, order);
+    const [updated] = await tx
+      .update(payouts)
+      .set({ status: "processing", reference: reference("po"), transferCode: null, failureReason: null, approvedBy: admin.id, completedAt: null })
+      .where(eq(payouts.id, row.id))
+      .returning();
+    return updated;
+  });
   await sendTransfer(p.id);
 }
 

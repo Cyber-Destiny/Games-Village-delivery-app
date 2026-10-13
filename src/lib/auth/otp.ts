@@ -3,7 +3,7 @@ import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { db } from "../db";
 import { otpCodes } from "../db/schema";
-import { sendSms } from "../sms";
+import { sendSms, smsConfigured } from "../sms";
 
 const TTL_MS = 10 * 60 * 1000;
 const RESEND_AFTER_MS = 30 * 1000;
@@ -14,8 +14,14 @@ function hash(phone: string, code: string) {
   return createHmac("sha256", process.env.SESSION_SECRET ?? "").update(`${phone}:${code}`).digest("hex");
 }
 
+/**
+ * Demo mode only: return the login code to the browser so the app can be tried
+ * without SMS. Anyone could then sign in as anyone, so this is off unless
+ * DEMO_SHOW_OTP=true is set explicitly, and it is always off once real SMS
+ * delivery is configured.
+ */
 export function showOtpOnScreen(): boolean {
-  return process.env.DEMO_SHOW_OTP === "true" || process.env.NODE_ENV !== "production";
+  return process.env.DEMO_SHOW_OTP === "true" && !smsConfigured();
 }
 
 export type RequestOtpResult =

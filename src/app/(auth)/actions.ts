@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getCurrentUser, homeFor, needsOnboarding } from "@/lib/auth/dal";
@@ -36,6 +36,7 @@ export async function verifyCode(phone: string, code: string) {
     const res = await verifyOtp(normalized, code);
     if (!res.ok) throw new UserError(res.error);
 
+    // ADMIN_PHONES is the single source of truth for who is an admin.
     const isAdmin = adminPhones().includes(normalized);
     let [user] = await db.select().from(users).where(eq(users.phone, normalized));
     if (!user) {
@@ -44,7 +45,18 @@ export async function verifyCode(phone: string, code: string) {
         .values({ phone: normalized, role: isAdmin ? "admin" : "resident" })
         .returning();
     } else if (isAdmin && user.role !== "admin") {
-      [user] = await db.update(users).set({ role: "admin" }).where(eq(users.id, user.id)).returning();
+      [user] = await db
+        .update(users)
+        .set({ role: "admin", sessionVersion: sql`${users.sessionVersion} + 1` })
+        .where(eq(users.id, user.id))
+        .returning();
+    } else if (!isAdmin && user.role === "admin") {
+      // Removed from ADMIN_PHONES → back to a regular resident; old admin sessions die.
+      [user] = await db
+        .update(users)
+        .set({ role: "resident", sessionVersion: sql`${users.sessionVersion} + 1` })
+        .where(eq(users.id, user.id))
+        .returning();
     }
     if (!user.isActive) throw new UserError("This account has been disabled. Contact the estate admin.");
     if (user.role === "runner") {

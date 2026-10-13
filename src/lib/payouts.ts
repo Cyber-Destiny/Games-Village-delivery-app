@@ -1,11 +1,11 @@
 import "server-only";
-import { and, eq, inArray, isNull, lt, lte } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, lte } from "drizzle-orm";
 import { db, type DbOrTx } from "./db";
-import { orderEvents, orders, payouts, runnerEarnings, runnerProfiles, vendors, type Payout } from "./db/schema";
+import { orderEvents, orders, payouts, runnerEarnings, runnerProfiles, users, vendors, type Payout } from "./db/schema";
 import { reference } from "./ids";
 import { naira } from "./money";
 import { notify } from "./notify";
-import { createRecipient, initiateTransfer, paystackLive, verifyTransfer } from "./paystack";
+import { createRecipient, initiateTransfer, PaystackError, paystackLive, verifyTransfer } from "./paystack";
 import { walletCredit } from "./wallet";
 
 const MOCK_SETTLE_MS = 3500;
@@ -83,6 +83,11 @@ export async function applyTransferOutcome(ref: string, outcome: "success" | "fa
     if (!p) return null;
 
     if (outcome === "success") {
+      if (p.status === "failed" || p.status === "reversed" || p.status === "rejected") {
+        // Money went out after we'd given up on it. Don't silently ignore it.
+        console.error(`[payouts] transfer ${ref} succeeded but payout ${p.id} is ${p.status}`);
+        return { p, outcome: "late_success" as const };
+      }
       if (p.status !== "processing") return null;
       await tx.update(payouts).set({ status: "success", completedAt: new Date() }).where(eq(payouts.id, p.id));
       if (p.type === "vendor" && p.orderId) {
@@ -107,6 +112,19 @@ export async function applyTransferOutcome(ref: string, outcome: "success" | "fa
     }
     return { p, outcome };
   });
+
+  if (changed?.outcome === "late_success") {
+    const admins = await db.select({ id: users.id }).from(users).where(eq(users.role, "admin"));
+    await notify(
+      admins.map((a) => a.id),
+      {
+        title: "Check this payout",
+        body: `A ${naira(changed.p.amount)} transfer to ${changed.p.accountName ?? "a recipient"} went through after it was marked ${changed.p.status}.`,
+        url: "/admin/payouts",
+      },
+    );
+    return changed;
+  }
 
   if (changed?.p.type === "vendor" && changed.p.orderId) {
     const [o] = await db.select({ runnerId: orders.runnerId, code: orders.code }).from(orders).where(eq(orders.id, changed.p.orderId));
@@ -139,16 +157,20 @@ export async function reconcileProcessingPayouts() {
   if (!paystackLive() || Date.now() - lastReconcile < 30_000) return;
   lastReconcile = Date.now();
   const stale = await db
-    .select({ reference: payouts.reference })
+    .select({ reference: payouts.reference, createdAt: payouts.createdAt })
     .from(payouts)
     .where(and(eq(payouts.status, "processing"), lt(payouts.createdAt, new Date(Date.now() - 60_000))))
+    .orderBy(asc(payouts.createdAt))
     .limit(10);
   for (const s of stale) {
     try {
       const status = await verifyTransfer(s.reference);
       if (status !== "pending") await applyTransferOutcome(s.reference, status);
-    } catch {
-      // try again on the next pass
+    } catch (err) {
+      // Paystack has no record of it (e.g. we crashed before sending): after a while, call it failed.
+      if (err instanceof PaystackError && err.definite && Date.now() - s.createdAt.getTime() > 10 * 60_000) {
+        await applyTransferOutcome(s.reference, "failed", "Transfer never reached Paystack");
+      }
     }
   }
 }

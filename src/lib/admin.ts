@@ -58,7 +58,10 @@ export async function getOverview() {
       .where(inArray(orders.status, ACTIVE_STATUSES))
       .orderBy(asc(orders.paidAt)),
     db.select({ n: count() }).from(payouts).where(eq(payouts.status, "pending_approval")),
-    db.select({ n: count() }).from(payouts).where(inArray(payouts.status, ["failed", "reversed"])),
+    db
+      .select({ n: count() })
+      .from(payouts)
+      .where(and(eq(payouts.type, "vendor"), inArray(payouts.status, ["failed", "reversed"]))),
     db
       .select({ n: count() })
       .from(runnerProfiles)
@@ -315,7 +318,8 @@ export async function getPayoutsAdmin() {
       .from(payouts)
       .leftJoin(orders, eq(orders.id, payouts.orderId))
       .leftJoin(users, eq(users.id, payouts.userId))
-      .where(inArray(payouts.status, ["pending_approval", "failed", "reversed"]))
+      // Failed runner payouts and withdrawals resolve themselves (earnings released / wallet refunded).
+      .where(or(eq(payouts.status, "pending_approval"), and(eq(payouts.type, "vendor"), inArray(payouts.status, ["failed", "reversed"]))))
       .orderBy(asc(payouts.createdAt)),
     db
       .select({ p: payouts, code: orders.code, who: users.name })
