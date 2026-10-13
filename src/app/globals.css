@@ -1,0 +1,347 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────
+   Design tokens
+   Warm paper neutrals, a deep estate green, and a saffron accent.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  color-scheme: light;
+
+  --bg: #f5f2eb;
+  --surface: #ffffff;
+  --surface-2: #faf8f3;
+  --sunken: #eeeae0;
+  --line: #e5e0d4;
+  --line-strong: #d3ccbc;
+
+  --ink: #0f1d17;
+  --ink-2: #39483f;
+  --muted: #6c7a72;
+  --faint: #9aa59f;
+
+  --primary: #137049;
+  --primary-hover: #0f5d3c;
+  --primary-ink: #ffffff;
+  --primary-soft: #e3f3ea;
+  --primary-soft-ink: #0d5236;
+
+  --accent: #ffb21e;
+  --accent-ink: #3a2600;
+  --accent-soft: #fff1d1;
+  --accent-soft-ink: #7a4f00;
+
+  --danger: #d4432f;
+  --danger-soft: #fdebe6;
+  --danger-soft-ink: #9b2c1c;
+  --info: #2d6be0;
+  --info-soft: #e8f0fd;
+
+  --hero: #0b3526;
+  --hero-2: #0f4632;
+  --hero-ink: #f2f7f3;
+  --hero-muted: #9ec2b0;
+
+  /* category tints */
+  --cat-food: #ffe4d2;
+  --cat-food-ink: #c4471d;
+  --cat-groceries: #dff1d9;
+  --cat-groceries-ink: #2c7a32;
+  --cat-gas: #ffe0dc;
+  --cat-gas-ink: #c73a2b;
+  --cat-pickup: #e1e9fb;
+  --cat-pickup-ink: #2f56c4;
+  --cat-laundry: #dcf0f6;
+  --cat-laundry-ink: #1b7895;
+  --cat-other: #ece4fb;
+  --cat-other-ink: #6b43c9;
+
+  --shadow-color: 15 29 23;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #090f0c;
+    --surface: #111915;
+    --surface-2: #151f1a;
+    --sunken: #0c1310;
+    --line: #202c26;
+    --line-strong: #2d3b34;
+
+    --ink: #ebf2ed;
+    --ink-2: #bac7bf;
+    --muted: #869489;
+    --faint: #5c6a62;
+
+    --primary: #2bb673;
+    --primary-hover: #36c47f;
+    --primary-ink: #03140c;
+    --primary-soft: #10291c;
+    --primary-soft-ink: #7fdcab;
+
+    --accent: #ffbe3d;
+    --accent-ink: #2a1b00;
+    --accent-soft: #2b2108;
+    --accent-soft-ink: #ffd27a;
+
+    --danger: #f0624d;
+    --danger-soft: #2d1410;
+    --danger-soft-ink: #ff9d8c;
+    --info: #6c9bff;
+    --info-soft: #121d33;
+
+    --hero: #0d2c20;
+    --hero-2: #12392a;
+    --hero-ink: #eef6f1;
+    --hero-muted: #8db8a3;
+
+    --cat-food: #2e1a10;
+    --cat-food-ink: #ff9a6b;
+    --cat-groceries: #142614;
+    --cat-groceries-ink: #7fd283;
+    --cat-gas: #2e1513;
+    --cat-gas-ink: #ff8576;
+    --cat-pickup: #141d33;
+    --cat-pickup-ink: #8aa9ff;
+    --cat-laundry: #0f2229;
+    --cat-laundry-ink: #6fd0ee;
+    --cat-other: #1e1631;
+    --cat-other-ink: #b59bff;
+
+    --shadow-color: 0 0 0;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-ink: var(--primary-soft-ink);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-ink: var(--accent-soft-ink);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-soft-ink: var(--danger-soft-ink);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-hero: var(--hero);
+  --color-hero-2: var(--hero-2);
+  --color-hero-ink: var(--hero-ink);
+  --color-hero-muted: var(--hero-muted);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+
+  --radius-card: 1.375rem;
+
+  --shadow-card: 0 1px 0 rgb(var(--shadow-color) / 0.03), 0 1px 3px rgb(var(--shadow-color) / 0.05),
+    0 10px 28px -16px rgb(var(--shadow-color) / 0.16);
+  --shadow-raised: 0 1px 0 rgb(var(--shadow-color) / 0.04), 0 4px 10px -2px rgb(var(--shadow-color) / 0.08),
+    0 24px 48px -24px rgb(var(--shadow-color) / 0.28);
+  --shadow-pop: 0 30px 80px -24px rgb(var(--shadow-color) / 0.45), 0 2px 6px rgb(var(--shadow-color) / 0.08);
+  --shadow-button: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 1px 2px rgb(var(--shadow-color) / 0.18),
+    0 8px 18px -8px rgb(19 112 73 / 0.55);
+
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-pulse-ring: pulse-ring 2.2s var(--ease-out-quint) infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-marquee: marquee 38s linear infinite;
+
+  @keyframes shimmer {
+    from {
+      background-position: -200% 0;
+    }
+    to {
+      background-position: 200% 0;
+    }
+  }
+  @keyframes pulse-ring {
+    0% {
+      transform: scale(0.6);
+      opacity: 0.55;
+    }
+    80%,
+    100% {
+      transform: scale(2.4);
+      opacity: 0;
+    }
+  }
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Base
+   ───────────────────────────────────────────────────────────── */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100dvh;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 26%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  button,
+  [role="button"] {
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--faint);
+  }
+  /* Hide number input spinners */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Utilities
+   ───────────────────────────────────────────────────────────── */
+
+@utility font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  letter-spacing: -0.022em;
+}
+
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility card {
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  border: 1px solid color-mix(in oklab, var(--line) 70%, transparent);
+}
+
+@utility hairline {
+  border-color: color-mix(in oklab, var(--line) 85%, transparent);
+}
+
+@utility grain {
+  position: relative;
+  isolation: isolate;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.22;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+}
+
+@utility skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--sunken) 0%,
+    color-mix(in oklab, var(--sunken) 55%, var(--surface)) 50%,
+    var(--sunken) 100%
+  );
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+  border-radius: 0.75rem;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+}
+
+@utility safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+@utility dotted-bg {
+  background-image: radial-gradient(color-mix(in oklab, var(--ink) 9%, transparent) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+@utility mask-fade-x {
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -1,0 +1,48 @@
+import "server-only";
+import { cache } from "react";
+import { redirect } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { db } from "../db";
+import { users, type Role, type User } from "../db/schema";
+import { readSession } from "./session";
+
+export const getCurrentUser = cache(async (): Promise<User | null> => {
+  const session = await readSession();
+  if (!session) return null;
+  const [user] = await db.select().from(users).where(eq(users.id, session.uid));
+  if (!user || !user.isActive || user.sessionVersion !== session.v) return null;
+  return user;
+});
+
+export function homeFor(user: Pick<User, "role">): string {
+  if (user.role === "admin") return "/admin";
+  if (user.role === "runner") return "/runner";
+  return "/home";
+}
+
+export function needsOnboarding(user: User): boolean {
+  return !user.name || (user.role === "resident" && (!user.block || !user.house));
+}
+
+export async function requireUser(): Promise<User> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  return user;
+}
+
+/** Ensures the signed-in user has one of the roles, otherwise sends them to their own home. */
+export async function requireRole(...roles: Role[]): Promise<User> {
+  const user = await requireUser();
+  if (!roles.includes(user.role)) redirect(homeFor(user));
+  return user;
+}
+
+/** For server actions / route handlers: throws instead of redirecting. */
+export async function assertRole(...roles: Role[]): Promise<User> {
+  const user = await getCurrentUser();
+  if (!user) throw new AuthError("Please sign in again.");
+  if (!roles.includes(user.role)) throw new AuthError("You don't have access to that.");
+  return user;
+}
+
+export class AuthError extends Error {}
