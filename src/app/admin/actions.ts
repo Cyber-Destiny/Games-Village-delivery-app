@@ -1,0 +1,284 @@
+"use server";
+
+import { and, eq, sql } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { assertRole } from "@/lib/auth/dal";
+import { isCategoryId } from "@/lib/categories";
+import { db } from "@/lib/db";
+import { orders, runnerProfiles, users, vendorItems, vendors } from "@/lib/db/schema";
+import { attempt, UserError } from "@/lib/errors";
+import {
+  adminCreditWallet,
+  adminMarkDelivered,
+  adminReassign,
+  approvePayout,
+  cancelByAdmin,
+  markPayoutManual,
+  payRunner,
+  rejectPayout,
+  retryPayout,
+} from "@/lib/orders/service";
+import { resolveAccount } from "@/lib/paystack";
+import { normalizePhone } from "@/lib/phone";
+import { saveSettings as persistSettings } from "@/lib/settings";
+import type { Settings } from "@/lib/settings-shared";
+
+const admin = () => assertRole("admin");
+const done = (...paths: string[]) => paths.forEach((p) => revalidatePath(p));
+
+// ── orders ───────────────────────────────────────────────────
+
+export async function reassignOrder(orderId: string, runnerId: string | null) {
+  return attempt(async () => {
+    await adminReassign(await admin(), orderId, runnerId);
+    done("/admin", `/admin/orders/${orderId}`);
+  });
+}
+
+export async function cancelOrder(orderId: string, reason: string, refund: number) {
+  return attempt(async () => {
+    await cancelByAdmin(await admin(), orderId, reason, refund);
+    done("/admin", `/admin/orders/${orderId}`);
+  });
+}
+
+export async function markDelivered(orderId: string) {
+  return attempt(async () => {
+    await adminMarkDelivered(await admin(), orderId);
+    done("/admin", `/admin/orders/${orderId}`);
+  });
+}
+
+// ── payouts ──────────────────────────────────────────────────
+
+export async function approve(payoutId: string) {
+  return attempt(async () => {
+    await approvePayout(await admin(), payoutId);
+    done("/admin/payouts", "/admin");
+  });
+}
+
+export async function reject(payoutId: string, note: string) {
+  return attempt(async () => {
+    await rejectPayout(await admin(), payoutId, note);
+    done("/admin/payouts", "/admin");
+  });
+}
+
+export async function markManual(payoutId: string) {
+  return attempt(async () => {
+    await markPayoutManual(await admin(), payoutId);
+    done("/admin/payouts", "/admin");
+  });
+}
+
+export async function retry(payoutId: string) {
+  return attempt(async () => {
+    await retryPayout(await admin(), payoutId);
+    done("/admin/payouts");
+  });
+}
+
+export async function payRunnerNow(runnerId: string) {
+  return attempt(async () => {
+    const p = await payRunner(await admin(), runnerId);
+    done("/admin/payouts", "/admin/runners");
+    return { amount: p.amount };
+  });
+}
+
+export async function creditWallet(userId: string, amount: number, note: string) {
+  return attempt(async () => {
+    await adminCreditWallet(await admin(), userId, amount, note);
+    done("/admin/residents");
+  });
+}
+
+// ── runners ──────────────────────────────────────────────────
+
+const runnerSchema = z.object({
+  id: z.string().uuid().nullable(),
+  name: z.string().trim().min(2, "Enter the runner's name").max(60),
+  phone: z.string(),
+  tag: z.string().trim().max(20),
+  nin: z.string().trim().max(20),
+  guarantorName: z.string().trim().max(60),
+  guarantorPhone: z.string().trim().max(20),
+  bank: z.object({ bankCode: z.string(), bankName: z.string(), accountNumber: z.string() }).nullable(),
+});
+
+export async function saveRunner(input: z.infer<typeof runnerSchema>) {
+  return attempt(async () => {
+    await admin();
+    const parsed = runnerSchema.safeParse(input);
+    if (!parsed.success) throw new UserError(parsed.error.issues[0]?.message ?? "Check the details.");
+    const v = parsed.data;
+    const phone = normalizePhone(v.phone);
+    if (!phone) throw new UserError("Enter a valid Nigerian phone number.");
+    if (v.nin && !/^\d{11}$/.test(v.nin)) throw new UserError("NIN must be 11 digits.");
+
+    let bank: { bankCode: string; bankName: string; accountNumber: string; accountName: string } | null = null;
+    if (v.bank?.accountNumber) {
+      const { accountName } = await resolveAccount(v.bank.accountNumber, v.bank.bankCode).catch(() => {
+        throw new UserError("We couldn't verify the bank account.");
+      });
+      bank = { ...v.bank, accountName };
+    }
+
+    await db.transaction(async (tx) => {
+      let userId = v.id;
+      if (!userId) {
+        const [existing] = await tx.select().from(users).where(eq(users.phone, phone));
+        if (existing && existing.role === "admin") throw new UserError("That number belongs to an admin.");
+        if (existing) {
+          await tx.update(users).set({ role: "runner", name: v.name, isActive: true }).where(eq(users.id, existing.id));
+          userId = existing.id;
+        } else {
+          const [u] = await tx.insert(users).values({ phone, name: v.name, role: "runner" }).returning();
+          userId = u.id;
+        }
+      } else {
+        const [clash] = await tx.select({ id: users.id }).from(users).where(and(eq(users.phone, phone), sql`${users.id} <> ${userId}`));
+        if (clash) throw new UserError("Another account already uses that phone number.");
+        await tx.update(users).set({ name: v.name, phone }).where(eq(users.id, userId));
+      }
+      const profile = {
+        tag: v.tag || null,
+        nin: v.nin || null,
+        guarantorName: v.guarantorName || null,
+        guarantorPhone: v.guarantorPhone ? normalizePhone(v.guarantorPhone) ?? v.guarantorPhone : null,
+        ...(bank ? { ...bank, recipientCode: null } : {}),
+      };
+      await tx
+        .insert(runnerProfiles)
+        .values({ userId: userId!, ...profile })
+        .onConflictDoUpdate({ target: runnerProfiles.userId, set: profile });
+    });
+    done("/admin/runners");
+  });
+}
+
+export async function setRunnerActive(userId: string, active: boolean) {
+  return attempt(async () => {
+    await admin();
+    await db
+      .update(users)
+      .set({ isActive: active, sessionVersion: active ? undefined : sql`${users.sessionVersion} + 1` })
+      .where(and(eq(users.id, userId), eq(users.role, "runner")));
+    if (!active) await db.update(runnerProfiles).set({ online: false }).where(eq(runnerProfiles.userId, userId));
+    done("/admin/runners");
+  });
+}
+
+// ── vendors ──────────────────────────────────────────────────
+
+const vendorSchema = z.object({
+  id: z.string().uuid().nullable(),
+  name: z.string().trim().min(2, "Enter the shop name").max(80),
+  category: z.string().refine((v): boolean => isCategoryId(v), "Pick a category"),
+  description: z.string().trim().max(160),
+  location: z.string().trim().max(120),
+  phone: z.string().trim().max(20),
+  hours: z.string().trim().max(40),
+  isPartner: z.boolean(),
+  isActive: z.boolean(),
+  bank: z.object({ bankCode: z.string(), bankName: z.string(), accountNumber: z.string() }).nullable(),
+});
+
+export async function saveVendor(input: z.infer<typeof vendorSchema>) {
+  return attempt(async () => {
+    await admin();
+    const parsed = vendorSchema.safeParse(input);
+    if (!parsed.success) throw new UserError(parsed.error.issues[0]?.message ?? "Check the details.");
+    const v = parsed.data;
+    let bank = {};
+    if (v.bank?.accountNumber) {
+      const { accountName } = await resolveAccount(v.bank.accountNumber, v.bank.bankCode).catch(() => {
+        throw new UserError("We couldn't verify the shop's bank account.");
+      });
+      bank = { ...v.bank, accountName, recipientCode: null };
+    }
+    const values = {
+      name: v.name,
+      category: v.category,
+      description: v.description || null,
+      location: v.location || null,
+      phone: v.phone ? normalizePhone(v.phone) ?? v.phone : null,
+      hours: v.hours || null,
+      isPartner: v.isPartner,
+      isActive: v.isActive,
+      ...bank,
+    };
+    let id = v.id;
+    if (id) await db.update(vendors).set(values).where(eq(vendors.id, id));
+    else [{ id }] = await db.insert(vendors).values(values).returning({ id: vendors.id });
+    done("/admin/vendors", "/home");
+    return { id: id! };
+  });
+}
+
+const itemSchema = z.object({
+  id: z.string().uuid().nullable(),
+  vendorId: z.string().uuid(),
+  name: z.string().trim().min(1, "Enter the item name").max(80),
+  price: z.number().int().min(0).max(100_000_000),
+  unit: z.string().trim().max(30),
+  isPopular: z.boolean(),
+  isActive: z.boolean(),
+});
+
+export async function saveItem(input: z.infer<typeof itemSchema>) {
+  return attempt(async () => {
+    await admin();
+    const parsed = itemSchema.safeParse(input);
+    if (!parsed.success) throw new UserError(parsed.error.issues[0]?.message ?? "Check the item.");
+    const { id, ...v } = parsed.data;
+    const values = { ...v, unit: v.unit || null };
+    if (id) await db.update(vendorItems).set(values).where(eq(vendorItems.id, id));
+    else await db.insert(vendorItems).values(values);
+    done("/admin/vendors");
+  });
+}
+
+export async function deleteItem(id: string) {
+  return attempt(async () => {
+    await admin();
+    await db.delete(vendorItems).where(eq(vendorItems.id, id));
+    done("/admin/vendors");
+  });
+}
+
+// ── residents ────────────────────────────────────────────────
+
+export async function setResidentActive(userId: string, active: boolean) {
+  return attempt(async () => {
+    await admin();
+    const [busy] = await db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(and(eq(orders.residentId, userId), sql`${orders.status} in ('searching','assigned','to_vendor','at_vendor','on_the_way','arrived')`));
+    if (!active && busy) throw new UserError("They have an errand in progress.");
+    await db
+      .update(users)
+      .set({ isActive: active, sessionVersion: active ? undefined : sql`${users.sessionVersion} + 1` })
+      .where(and(eq(users.id, userId), eq(users.role, "resident")));
+    done("/admin/residents");
+  });
+}
+
+// ── settings ─────────────────────────────────────────────────
+
+export async function saveSettings(next: Settings) {
+  return attempt(async () => {
+    await admin();
+    const hhmm = /^([01]\d|2[0-3]):[0-5]\d$/;
+    if (!hhmm.test(next.openTime) || !hhmm.test(next.closeTime)) throw new UserError("Use HH:MM for opening hours.");
+    if (next.runnerCommissionPct < 0 || next.runnerCommissionPct > 100) throw new UserError("Commission must be 0–100%.");
+    for (const fee of Object.values(next.fees)) if (fee < 0) throw new UserError("Fees can't be negative.");
+    const phone = next.supportPhone ? normalizePhone(next.supportPhone) : "";
+    if (next.supportPhone && !phone) throw new UserError("Support phone isn't a valid Nigerian number.");
+    await persistSettings({ ...next, supportPhone: phone ?? "", announcement: next.announcement.trim().slice(0, 200) });
+    done("/admin/settings", "/home", "/");
+  });
+}
