@@ -15,14 +15,15 @@ import {
   type Order,
   type User,
 } from "../db/schema";
-import { getCategory, isCategoryId, type CategoryId } from "../categories";
+import { getCategory, isCategoryId } from "../categories";
 import { UserError } from "../errors";
 import { deliveryCode, orderCode, reference } from "../ids";
 import { naira } from "../money";
 import { notify } from "../notify";
 import { initializeTransaction, paystackLive, resolveAccount, verifyTransaction } from "../paystack";
 import { applyTransferOutcome, reconcileProcessingPayouts, sendTransfer, settleMockPayouts } from "../payouts";
-import { getSettings, isOpenNow, type Settings } from "../settings";
+import { getSettings, isOpenNow } from "../settings";
+import { computeQuote } from "./quote";
 import { weekStart } from "../time";
 import { walletCredit, walletDebit } from "../wallet";
 import { RESIDENT_CANCELLABLE, RUNNER_ACTIVE_STATUSES, type OrderStatus } from "./status";
@@ -66,38 +67,12 @@ function amountPaidIn(order: Order) {
 
 // ── quote ────────────────────────────────────────────────────
 
-export type Quote = {
-  serviceFee: number;
-  discount: number;
-  loyaltyFree: boolean;
-  total: number;
-  walletApplied: number;
-  toPay: number;
-  /** How many paid errands until the next free one (0 = this one is free). */
-  loyaltyRemaining: number;
-};
-
 export async function paidOrderCount(userId: string) {
   const [row] = await db
     .select({ n: count() })
     .from(orders)
     .where(and(eq(orders.residentId, userId), isNotNull(orders.paidAt), sql`${orders.status} <> 'cancelled'`));
   return row?.n ?? 0;
-}
-
-export function computeQuote(
-  s: Settings,
-  input: { category: CategoryId; budget: number; walletBalance: number; useWallet: boolean; paidCount: number },
-): Quote {
-  const serviceFee = s.fees[input.category] ?? s.fees.other;
-  const every = s.loyaltyEvery;
-  const position = every > 0 ? (input.paidCount % every) + 1 : 0; // 1..every
-  const loyaltyFree = every > 0 && position === every;
-  const loyaltyRemaining = every > 0 ? every - position : -1;
-  const discount = loyaltyFree ? serviceFee : 0;
-  const total = input.budget + serviceFee - discount;
-  const walletApplied = input.useWallet ? Math.min(Math.max(input.walletBalance, 0), total) : 0;
-  return { serviceFee, discount, loyaltyFree, total, walletApplied, toPay: total - walletApplied, loyaltyRemaining };
 }
 
 // ── create ───────────────────────────────────────────────────

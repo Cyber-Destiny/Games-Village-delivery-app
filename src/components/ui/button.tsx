@@ -58,7 +58,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       }}
       {...rest}
     >
-      <span className={cn("inline-flex items-center gap-2", loading && "opacity-0")}>{children}</span>
+      <span className={cn("items-center gap-2", block ? "flex w-full justify-center" : "inline-flex", loading && "opacity-0")}>{children}</span>
       {loading ? (
         <span className="absolute inset-0 grid place-items-center">
           <Spinner className="size-5" />

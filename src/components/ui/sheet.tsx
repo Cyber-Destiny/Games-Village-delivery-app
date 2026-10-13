@@ -118,7 +118,7 @@ export function Sheet({
                 ) : null}
               </div>
             ) : null}
-            <div className="safe-bottom overflow-y-auto overscroll-contain px-6 pb-6 pt-2">{children}</div>
+            <div className="safe-bottom flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-6 pb-6 pt-2">{children}</div>
           </motion.div>
         </div>
       ) : null}

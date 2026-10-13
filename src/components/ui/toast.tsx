@@ -16,7 +16,13 @@ function emit() {
   for (const l of listeners) l();
 }
 
+const recent = new Map<string, number>();
+
 function push(tone: Tone, title: string, description?: string, duration = 3800) {
+  // Swallow exact duplicates fired within a moment of each other.
+  const key = `${tone}|${title}|${description ?? ""}`;
+  if (Date.now() - (recent.get(key) ?? 0) < 1500) return;
+  recent.set(key, Date.now());
   const id = nextId++;
   toasts = [...toasts.slice(-2), { id, tone, title, description }];
   emit();

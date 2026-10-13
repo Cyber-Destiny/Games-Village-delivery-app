@@ -1,0 +1,301 @@
+/**
+ * Demo data so the app looks alive on first run.
+ *   npm run db:seed            → adds demo data if the database is empty
+ *   npm run db:seed -- --reset → wipes everything first (DANGER: deletes all data)
+ *
+ * All shops, people and phone numbers below are made up. Replace them with your
+ * real vendors from the admin console before launch.
+ */
+import { drizzle } from "drizzle-orm/postgres-js";
+import { sql } from "drizzle-orm";
+import postgres from "postgres";
+import * as schema from "../src/lib/db/schema";
+import { DEFAULT_SETTINGS } from "../src/lib/settings-shared";
+import { weekStart } from "../src/lib/time";
+
+try {
+  process.loadEnvFile?.(".env");
+} catch {
+  // ignore
+}
+
+const ADMIN_PHONE = (process.env.ADMIN_PHONES ?? "2348000000000").split(",")[0].trim();
+
+const client = postgres(process.env.DATABASE_URL!, { max: 1, prepare: false });
+const db = drizzle(client, { schema });
+const { users, runnerProfiles, vendors, vendorItems, orders, orderEvents, runnerEarnings, settings } = schema;
+
+const k = (naira: number) => naira * 100;
+const rand = <T>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+const ALPHA = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const code = () => Array.from({ length: 6 }, () => rand(ALPHA.split(""))).join("");
+
+const SHOPS = [
+  {
+    name: "Mama Ngozi's Kitchen",
+    category: "food",
+    location: "Block D, by the basketball court",
+    description: "Home-style Nigerian meals, cooked fresh daily",
+    hours: "8am – 8pm",
+    items: [
+      ["Jollof rice & chicken", 3500, true],
+      ["Fried rice & turkey", 4200, true],
+      ["Pounded yam & egusi", 3000, false],
+      ["Ofada rice & ayamase", 3800, false],
+      ["Small chops (pack)", 2500, false],
+    ],
+  },
+  {
+    name: "Village Mart",
+    category: "groceries",
+    location: "Estate market, shop 4",
+    description: "Provisions, drinks, toiletries",
+    hours: "7am – 9pm",
+    items: [
+      ["Bread (big loaf)", 1800, true],
+      ["Peak milk (tin)", 900, true],
+      ["Eggs (crate)", 6000, true],
+      ["Indomie (pack of 5)", 1600, false],
+      ["Bottled water (pack of 12)", 2500, false],
+      ["Coke (50cl)", 500, false],
+      ["Dettol soap", 900, false],
+    ],
+  },
+  {
+    name: "Prime Gas Point",
+    category: "gas",
+    location: "Gate 2 road",
+    description: "Cooking gas refills, all cylinder sizes",
+    hours: "7am – 7pm",
+    items: [
+      ["12.5kg refill", 18000, true],
+      ["6kg refill", 8800, true],
+      ["3kg refill", 4500, false],
+    ],
+  },
+  {
+    name: "FreshFold Dry Cleaners",
+    category: "laundry",
+    location: "Block A shopping row",
+    description: "Wash, iron and dry-clean",
+    hours: "8am – 6pm",
+    items: [
+      ["Shirt / blouse", 700, true],
+      ["Trousers", 800, false],
+      ["Native (agbada)", 3000, false],
+      ["Duvet", 4500, false],
+    ],
+  },
+  {
+    name: "Suya Junction",
+    category: "food",
+    location: "Opposite the gym",
+    description: "Evenings only — beef and chicken suya",
+    hours: "5pm – 10pm",
+    items: [
+      ["Beef suya", 2000, true],
+      ["Chicken suya", 3000, false],
+      ["Kilishi", 2500, false],
+    ],
+  },
+  {
+    name: "CarePlus Pharmacy",
+    category: "other",
+    location: "Estate market, shop 11",
+    description: "Over-the-counter medicine and essentials",
+    hours: "8am – 9pm",
+    items: [
+      ["Paracetamol (pack)", 600, true],
+      ["Vitamin C (tabs)", 1500, false],
+      ["ORS sachets", 400, false],
+    ],
+  },
+] as const;
+
+const RUNNERS = [
+  { name: "Adaeze Okafor", phone: "2348011111111", tag: "RN-01" },
+  { name: "Musa Bello", phone: "2348022222222", tag: "RN-02" },
+  { name: "Tunde Adeyemi", phone: "2348033333333", tag: "RN-03" },
+];
+
+const RESIDENTS = [
+  ["Amaka Obi", "C", "14"],
+  ["Ibrahim Sule", "A", "3"],
+  ["Funke Adebayo", "F", "22"],
+  ["Emeka Nwosu", "B", "7"],
+  ["Halima Garba", "D", "11"],
+  ["Segun Lawal", "E", "5"],
+  ["Ngozi Eze", "C", "2"],
+  ["Yusuf Danjuma", "G", "18"],
+  ["Bisi Ogunleye", "A", "9"],
+  ["Chidi Okeke", "H", "1"],
+  ["Zainab Musa", "B", "15"],
+  ["Kemi Bakare", "F", "6"],
+] as const;
+
+async function main() {
+  const reset = process.argv.includes("--reset");
+  if (reset) {
+    console.log("Resetting all data…");
+    await db.execute(sql`truncate table messages, order_events, topups, payments, runner_earnings, wallet_entries, payouts, orders, vendor_items, vendors, runner_profiles, otp_codes, uploads, push_subscriptions, settings, users restart identity cascade`);
+  } else {
+    const existing = await db.select({ id: vendors.id }).from(vendors).limit(1);
+    if (existing.length) {
+      console.log("Database already has data — skipping. Use `npm run db:seed -- --reset` to start over.");
+      return;
+    }
+  }
+
+  await db.insert(settings).values({ id: 1, data: DEFAULT_SETTINGS }).onConflictDoNothing();
+
+  // Admin
+  await db
+    .insert(users)
+    .values({ phone: ADMIN_PHONE, name: "Estate Admin", role: "admin" })
+    .onConflictDoUpdate({ target: users.phone, set: { role: "admin" } });
+
+  // Shops
+  const shopRows: Array<{ id: string; name: string; category: string; prices: Array<[string, number]> }> = [];
+  for (const [i, s] of SHOPS.entries()) {
+    const [v] = await db
+      .insert(vendors)
+      .values({
+        name: s.name,
+        category: s.category,
+        location: s.location,
+        description: s.description,
+        hours: s.hours,
+        phone: `23480${String(50000000 + i * 1111).padStart(8, "0")}`,
+        bankCode: "058",
+        bankName: "Guaranty Trust Bank",
+        accountNumber: `01234567${String(i).padStart(2, "0")}`,
+        accountName: `DEMO ${s.name.toUpperCase()}`.slice(0, 40),
+        isPartner: true,
+        sort: i,
+      })
+      .returning();
+    await db.insert(vendorItems).values(
+      s.items.map(([name, price, popular], j) => ({ vendorId: v.id, name, price: k(price), isPopular: popular, sort: j })),
+    );
+    shopRows.push({ id: v.id, name: v.name, category: v.category, prices: s.items.map(([n, p]) => [n, k(p)] as [string, number]) });
+  }
+
+  // Runners
+  const runnerIds: string[] = [];
+  for (const r of RUNNERS) {
+    const [u] = await db.insert(users).values({ phone: r.phone, name: r.name, role: "runner" }).returning();
+    await db.insert(runnerProfiles).values({
+      userId: u.id,
+      tag: r.tag,
+      nin: "12345678901",
+      guarantorName: "Demo Guarantor",
+      guarantorPhone: "2348070000000",
+      bankCode: "058",
+      bankName: "Guaranty Trust Bank",
+      accountNumber: `09876543${r.tag.slice(-2)}`,
+      accountName: r.name.toUpperCase(),
+    });
+    runnerIds.push(u.id);
+  }
+
+  // Residents
+  const residentIds: string[] = [];
+  for (const [i, [name, block, house]] of RESIDENTS.entries()) {
+    const [u] = await db
+      .insert(users)
+      .values({ phone: `234809999${String(9999 - i).padStart(4, "0")}`, name, block, house, role: "resident" })
+      .returning();
+    residentIds.push(u.id);
+  }
+
+  // History: delivered errands over the past 3 weeks
+  const now = Date.now();
+  const fees = DEFAULT_SETTINGS.fees as Record<string, number>;
+  let made = 0;
+  const ratingSums = new Map<string, { sum: number; n: number }>();
+  for (let day = 20; day >= 0; day--) {
+    const perDay = day === 0 ? 3 : 3 + Math.floor(Math.random() * 6);
+    for (let n = 0; n < perDay; n++) {
+      const shop = rand(shopRows);
+      const [itemName, price] = rand(shop.prices);
+      const qty = 1 + Math.floor(Math.random() * 3);
+      const budget = Math.ceil((price * qty * 1.1) / 10000) * 10000;
+      const actual = price * qty;
+      const resIdx = Math.floor(Math.random() * Math.random() * residentIds.length); // some residents order a lot
+      // Residents 6+ haven't ordered in the last two weeks (for the "gone quiet" view)
+      if (resIdx >= 6 && day < 15) continue;
+      const residentId = residentIds[resIdx];
+      const runnerId = rand(runnerIds);
+      const placed = new Date(now - day * 86400000 - (2 + Math.random() * 10) * 3600000);
+      const delivered = new Date(placed.getTime() + (18 + Math.random() * 30) * 60000);
+      if (delivered.getTime() > now) continue;
+      const fee = fees[shop.category] ?? fees.other;
+      const rating = Math.random() < 0.7 ? (Math.random() < 0.8 ? 5 : 4) : null;
+      const [o] = await db
+        .insert(orders)
+        .values({
+          code: code(),
+          residentId,
+          runnerId,
+          category: shop.category,
+          kind: shop.category === "laundry" ? "pickup" : "buy",
+          status: "delivered",
+          vendorId: shop.id,
+          vendorName: shop.name,
+          items: [{ name: itemName, qty, price }],
+          dropBlock: RESIDENTS[resIdx][1],
+          dropHouse: RESIDENTS[resIdx][2],
+          budget,
+          serviceFee: fee,
+          total: budget + fee,
+          actualCost: actual,
+          changeRefunded: 0,
+          deliveryCode: "0000",
+          rating,
+          ratingTags: rating ? ["Fast", "Polite"] : null,
+          createdAt: placed,
+          paidAt: placed,
+          assignedAt: placed,
+          acceptedAt: placed,
+          atVendorAt: new Date(placed.getTime() + 6 * 60000),
+          onTheWayAt: new Date(placed.getTime() + 14 * 60000),
+          arrivedAt: delivered,
+          deliveredAt: delivered,
+          updatedAt: delivered,
+        })
+        .returning();
+      await db.insert(orderEvents).values({ orderId: o.id, type: "delivered", message: "Delivered — code confirmed", createdAt: delivered });
+      await db.insert(runnerEarnings).values({
+        runnerId,
+        orderId: o.id,
+        type: "commission",
+        amount: Math.round((fee * DEFAULT_SETTINGS.runnerCommissionPct) / 100),
+        weekStart: weekStart(delivered),
+        createdAt: delivered,
+      });
+      await db
+        .update(users)
+        .set({ deliveredCount: sql`${users.deliveredCount} + 1`, lastOrderAt: delivered })
+        .where(sql`${users.id} = ${residentId}`);
+      if (rating) {
+        const r = ratingSums.get(runnerId) ?? { sum: 0, n: 0 };
+        ratingSums.set(runnerId, { sum: r.sum + rating, n: r.n + 1 });
+      }
+      made++;
+    }
+  }
+  for (const [runnerId, r] of ratingSums) {
+    await db.update(runnerProfiles).set({ ratingSum: r.sum, ratingCount: r.n }).where(sql`${runnerProfiles.userId} = ${runnerId}`);
+  }
+
+  console.log(`✓ Seeded ${SHOPS.length} shops, ${RUNNERS.length} runners, ${RESIDENTS.length} residents, ${made} past errands.`);
+  console.log(`  Admin phone: ${ADMIN_PHONE}`);
+  console.log(`  Demo resident: 0809 999 9999 (Amaka Obi) · Demo runner: 0801 111 1111 (Adaeze)`);
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exitCode = 1;
+  })
+  .finally(() => client.end());

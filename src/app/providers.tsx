@@ -2,6 +2,7 @@
 
 import { MotionConfig } from "motion/react";
 import { SWRConfig } from "swr";
+import { ServiceWorker } from "@/components/app/push";
 import { Toaster } from "@/components/ui/toast";
 
 async function fetcher(url: string) {
@@ -21,6 +22,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <SWRConfig value={{ fetcher, revalidateOnFocus: true, dedupingInterval: 1500, keepPreviousData: true }}>
         {children}
         <Toaster />
+        <ServiceWorker />
       </SWRConfig>
     </MotionConfig>
   );
