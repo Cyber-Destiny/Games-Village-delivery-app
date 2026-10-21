@@ -15,7 +15,7 @@ const items = [
   { href: "/account", label: "Account", icon: UserRound },
 ];
 
-const HIDE_ON = [/^\/new/, /^\/orders\/[^/]+/, /^\/shops\//];
+const HIDE_ON = [/^\/new/, /^\/collect/, /^\/orders\/[^/]+/, /^\/shops\//];
 
 export function BottomNav({ activeCount = 0 }: { activeCount?: number }) {
   const pathname = usePathname();

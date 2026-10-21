@@ -14,7 +14,13 @@ It's a mobile-first web app (installable on the home screen) with three parts:
 
 ---
 
-## How the money flows
+## Two ways to order
+
+**Order from the shop directly.** Tap a shop to see its phone numbers, call or WhatsApp to order, and pay the shop yourself. Once it's packed, tap **Send a rider**, enter the name the order is under, and pay the delivery fee in the app. The rider asks the shop for the order by that name and never handles any money. Cancelling before the rider reaches the shop refunds the fee to the wallet.
+
+**Let a runner buy it.** The resident pays everything up front and the app pays the shop, as described below.
+
+## How the money flows (runner buys it)
 
 1. The resident sets a **budget** for the items and pays *budget + service fee* up front (card, transfer or USSD via Paystack, or from their wallet).
 2. At the shop the runner enters what it actually cost and snaps the receipt.
@@ -110,7 +116,7 @@ Put the keys in `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`. Runners 
 ## Day-to-day admin
 
 - **Add runners** in `/admin/runners` with their phone, NIN, guarantor and bank account. They sign in with that phone number.
-- **Add shops** in `/admin/vendors` (Shops) with their bank account and popular items. Partner shops are paid automatically.
+- **Add shops** in `/admin/vendors` (Shops) with their phone numbers, bank account and popular items. Residents see the numbers when they tap the shop. Partner shops are paid automatically.
 - **Approve payouts** in `/admin/payouts` (one-off shops and wallet withdrawals), and pay runners their earnings weekly with one tap.
 - **Watch the overview** for errands waiting too long, runners not accepting, failed transfers and unread chats.
 - **Residents → Gone quiet** lists regulars who stopped ordering. Give them a call.

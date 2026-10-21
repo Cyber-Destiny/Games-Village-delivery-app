@@ -6,7 +6,7 @@ import { z } from "zod";
 import { assertRole } from "@/lib/auth/dal";
 import { isCategoryId } from "@/lib/categories";
 import { db } from "@/lib/db";
-import { orders, runnerProfiles, users, vendorItems, vendors } from "@/lib/db/schema";
+import { orders, runnerProfiles, users, vendorItems, vendors, type VendorContact } from "@/lib/db/schema";
 import { attempt, UserError } from "@/lib/errors";
 import {
   adminCreditWallet,
@@ -20,7 +20,7 @@ import {
   retryPayout,
 } from "@/lib/orders/service";
 import { resolveAccount } from "@/lib/paystack";
-import { normalizePhone } from "@/lib/phone";
+import { normalizeContactPhone, normalizePhone } from "@/lib/phone";
 import { saveSettings as persistSettings } from "@/lib/settings";
 import type { Settings } from "@/lib/settings-shared";
 
@@ -179,7 +179,9 @@ const vendorSchema = z.object({
   category: z.string().refine((v): boolean => isCategoryId(v), "Pick a category"),
   description: z.string().trim().max(160),
   location: z.string().trim().max(120),
-  phone: z.string().trim().max(20),
+  contacts: z
+    .array(z.object({ label: z.string().trim().max(40), phone: z.string().trim().max(20) }))
+    .max(6, "Add at most 6 numbers"),
   hours: z.string().trim().max(40),
   isPartner: z.boolean(),
   isActive: z.boolean(),
@@ -192,6 +194,13 @@ export async function saveVendor(input: z.infer<typeof vendorSchema>) {
     const parsed = vendorSchema.safeParse(input);
     if (!parsed.success) throw new UserError(parsed.error.issues[0]?.message ?? "Check the details.");
     const v = parsed.data;
+    const contacts: VendorContact[] = [];
+    for (const c of v.contacts) {
+      if (!c.phone) continue;
+      const phone = normalizeContactPhone(c.phone);
+      if (!phone) throw new UserError(`"${c.phone}" doesn't look like a phone number.`);
+      if (!contacts.some((x) => x.phone === phone)) contacts.push({ label: c.label || null, phone });
+    }
     let bank = {};
     if (v.bank?.accountNumber) {
       const { accountName } = await resolveAccount(v.bank.accountNumber, v.bank.bankCode).catch(() => {
@@ -204,7 +213,7 @@ export async function saveVendor(input: z.infer<typeof vendorSchema>) {
       category: v.category,
       description: v.description || null,
       location: v.location || null,
-      phone: v.phone ? normalizePhone(v.phone) ?? v.phone : null,
+      contacts,
       hours: v.hours || null,
       isPartner: v.isPartner,
       isActive: v.isActive,

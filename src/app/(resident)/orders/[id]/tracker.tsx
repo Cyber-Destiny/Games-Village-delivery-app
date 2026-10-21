@@ -48,6 +48,7 @@ export function Tracker({ initial }: { initial: OrderView }) {
     category: order.category,
     runnerName: order.runner?.firstName,
     place: order.kind === "pickup" ? order.pickupFrom : order.vendorName,
+    collect: !!order.collectAs,
   });
   const { progress, stage } = mapProgress(order.status, order.kind);
 
@@ -305,7 +306,10 @@ export function Tracker({ initial }: { initial: OrderView }) {
               <span className="text-[22px] tracking-tight text-accent">★★★★★</span>
             </motion.button>
           )}
-          <Link href={`/new?from=${order.id}`} className="mt-3 flex h-12 items-center justify-center rounded-2xl border border-line bg-surface text-[14.5px] font-semibold text-ink">
+          <Link
+            href={order.collectAs && order.vendorId ? `/collect?vendor=${order.vendorId}` : `/new?from=${order.id}`}
+            className="mt-3 flex h-12 items-center justify-center rounded-2xl border border-line bg-surface text-[14.5px] font-semibold text-ink"
+          >
             Order this again
           </Link>
         </section>
@@ -317,7 +321,7 @@ export function Tracker({ initial }: { initial: OrderView }) {
           <div className="flex items-center gap-3 px-4 py-3.5" style={{ background: tint.bg }}>
             <CategoryArt id={order.category} size={40} />
             <div className="min-w-0">
-              <p className="font-display text-[16px] font-semibold text-ink">{cat.label}</p>
+              <p className="font-display text-[16px] font-semibold text-ink">{order.collectAs ? "Paid order pickup" : cat.label}</p>
               <p className="flex items-center gap-1 truncate text-[13px] text-ink-2">
                 {order.kind === "pickup" ? <MapPin className="size-3.5" /> : <Store className="size-3.5" />}
                 {order.kind === "pickup" ? `From ${order.pickupFrom ?? "—"}` : order.vendorName ?? "Any shop in the estate"}
@@ -342,7 +346,7 @@ export function Tracker({ initial }: { initial: OrderView }) {
             <h3 className="font-display text-[16px] font-semibold text-ink">Payment</h3>
             {order.receiptUrl ? null : order.status === "at_vendor" ? (
               <span className="flex items-center gap-1 text-[12.5px] text-muted">
-                <Clock3 className="size-3.5" /> Buying now
+                <Clock3 className="size-3.5" /> {order.kind === "pickup" ? "Collecting now" : "Buying now"}
               </span>
             ) : null}
           </div>

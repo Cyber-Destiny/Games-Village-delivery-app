@@ -79,6 +79,12 @@ export function DeliveryCode({ code, compact }: { code: string; compact?: boolea
 export function ItemsList({ order }: { order: OrderView }) {
   return (
     <div className="space-y-2.5">
+      {order.collectAs ? (
+        <div className="flex items-baseline justify-between gap-3 text-[14.5px]">
+          <span className="text-muted">Order under</span>
+          <span className="font-semibold text-ink">{order.collectAs}</span>
+        </div>
+      ) : null}
       {order.items.map((i, idx) => (
         <div key={idx} className="flex items-baseline justify-between gap-3 text-[14.5px]">
           <span className="text-ink">
@@ -129,7 +135,7 @@ export function MoneyBreakdown({ order, perspective }: { order: OrderView; persp
       {m.budget > 0 ? <MoneyRow label={order.kind === "buy" ? "Items budget" : "To pay on collection"} value={naira(m.budget)} /> : null}
       {m.topupTotal > 0 ? <MoneyRow label="Extra approved" value={naira(m.topupTotal)} /> : null}
       <MoneyRow
-        label="Service fee"
+        label={order.collectAs ? "Delivery fee" : "Service fee"}
         value={
           m.loyaltyFree ? (
             <span className="flex items-center gap-2">

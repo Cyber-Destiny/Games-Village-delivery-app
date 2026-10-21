@@ -92,6 +92,7 @@ export const createOrderSchema = z.object({
   vendorLocation: z.string().trim().max(120).nullable().optional(),
   pickupFrom: z.string().trim().max(160).nullable().optional(),
   deliverTo: z.string().trim().max(160).nullable().optional(),
+  collectAs: z.string().trim().max(60).nullable().optional(),
   items: z.array(itemSchema).max(40),
   notes: z.string().trim().max(600).nullable().optional(),
   photoId: z.string().uuid().nullable().optional(),
@@ -122,6 +123,11 @@ export async function createOrder(user: User, raw: CreateOrderInput): Promise<{ 
     throw new UserError("Tell us what to pick up and from where.");
   }
   if (input.budget > s.maxBudget) throw new UserError(`The maximum budget per errand is ${naira(s.maxBudget)}.`);
+  // Collecting an order already paid at the shop: no money changes hands at the shop.
+  const collectAs = input.collectAs || null;
+  if (collectAs && (category.kind !== "pickup" || !input.vendorId || input.budget > 0)) {
+    throw new UserError("Pick the shop you paid.");
+  }
 
   let vendor: typeof vendors.$inferSelect | undefined;
   if (input.vendorId) {
@@ -154,6 +160,7 @@ export async function createOrder(user: User, raw: CreateOrderInput): Promise<{ 
           vendorLocation: vendor?.location ?? input.vendorLocation ?? null,
           pickupFrom: input.pickupFrom ?? null,
           deliverTo: input.deliverTo ?? null,
+          collectAs,
           items,
           notes: input.notes ?? null,
           photoId: input.photoId ?? null,
@@ -391,11 +398,12 @@ async function tryAssign(orderId: string): Promise<"assigned" | "no-runners" | "
   if (res.r === "assigned") {
     const { order, runner } = res;
     const where = order.kind === "pickup" ? order.pickupFrom || order.vendorName : order.vendorName;
+    const what = order.collectAs ? "Collect a paid order" : getCategory(order.category).label;
     await notify(runner.id, {
       title: "New errand 🛵",
-      body: `${getCategory(order.category).label}${where ? ` · ${where}` : ""} → Block ${order.dropBlock}. Tap to accept.`,
+      body: `${what}${where ? ` · ${where}` : ""} → Block ${order.dropBlock}. Tap to accept.`,
       url: `/runner/jobs/${order.id}`,
-      sms: `New errand #${order.code}: ${getCategory(order.category).label} to Block ${order.dropBlock}. Open the app to accept.`,
+      sms: `New errand #${order.code}: ${what} to Block ${order.dropBlock}. Open the app to accept.`,
       tag: `order-${order.id}`,
     });
     await notify(order.residentId, {
@@ -539,7 +547,11 @@ export async function cancelByResident(user: User, orderId: string, reason: stri
   const [order] = await db.select().from(orders).where(and(eq(orders.id, orderId), eq(orders.residentId, user.id)));
   if (!order) throw new UserError("Errand not found.");
   if (!RESIDENT_CANCELLABLE.includes(order.status)) {
-    throw new UserError("Your runner is already buying your items, so this can't be cancelled. Chat with them instead.");
+    throw new UserError(
+      order.kind === "pickup"
+        ? "Your runner has already reached the pick-up point, so this can't be cancelled. Chat with them instead."
+        : "Your runner is already buying your items, so this can't be cancelled. Chat with them instead.",
+    );
   }
   return cancelOrderInternal(orderId, reason || "Cancelled by resident", user.id, { allowed: RESIDENT_CANCELLABLE });
 }

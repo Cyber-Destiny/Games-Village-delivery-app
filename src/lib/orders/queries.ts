@@ -81,10 +81,11 @@ async function buildOrderView(order: Order, viewer: Viewer) {
     vendorId: order.vendorId,
     vendorName: order.vendorName,
     vendorLocation: order.vendorLocation,
-    vendorPhone: (isRunner || isAdmin) && vendor ? vendor.phone : null,
+    vendorContacts: (isRunner || isAdmin) && vendor ? vendor.contacts : [],
     vendorIsPartner: !!vendor?.isPartner && !!vendor?.accountNumber,
     pickupFrom: order.pickupFrom,
     deliverTo: order.deliverTo,
+    collectAs: order.collectAs,
     items: order.items,
     notes: order.notes,
     photoUrl: order.photoId ? `/api/uploads/${order.photoId}` : null,
@@ -180,6 +181,7 @@ export type OrderCardData = {
 };
 
 function summarize(o: Order): string {
+  if (o.collectAs) return o.notes?.slice(0, 60) || "Paid order pickup";
   const items = o.items ?? [];
   if (items.length) {
     const first = items[0];

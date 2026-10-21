@@ -23,6 +23,7 @@ export async function getShops() {
     description: v.description,
     location: v.location,
     hours: v.hours,
+    contacts: v.contacts,
     isPartner: v.isPartner && !!v.accountNumber,
     items: itemRows
       .filter((i) => i.vendorId === v.id)

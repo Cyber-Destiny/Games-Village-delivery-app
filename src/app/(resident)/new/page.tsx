@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/dal";
 import { isCategoryId, type CategoryId } from "@/lib/categories";
 import { db } from "@/lib/db";
@@ -43,6 +44,7 @@ export default async function NewErrandPage({
       .select()
       .from(orders)
       .where(and(eq(orders.id, sp.from), eq(orders.residentId, user.id)));
+    if (o?.collectAs && o.vendorId) redirect(`/collect?vendor=${o.vendorId}`);
     if (o && isCategoryId(o.category)) {
       prefill = {
         category: o.category,

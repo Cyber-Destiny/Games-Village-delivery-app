@@ -1,13 +1,14 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, Clock3, MapPin, PencilLine, Plus, Sparkles } from "lucide-react";
+import { ArrowRight, Bike, Clock3, MapPin, PencilLine, Phone, Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { CategoryArt, tintFor } from "@/components/brand/category-art";
 import { PageHeader } from "@/components/app/page-header";
-import { Button } from "@/components/ui/button";
+import { ShopContactSheet } from "@/components/app/shop-contact-sheet";
+import { Button, LinkButton } from "@/components/ui/button";
 import { QtyStepper } from "@/components/ui/stepper";
 import { getCategory } from "@/lib/categories";
 import { haptic } from "@/lib/haptics";
@@ -18,6 +19,7 @@ export function ShopView({ shop }: { shop: Shop }) {
   const router = useRouter();
   const t = tintFor(shop.category);
   const [cart, setCart] = useState<Record<string, number>>({});
+  const [contactOpen, setContactOpen] = useState(false);
   const count = Object.values(cart).reduce((a, b) => a + b, 0);
   const subtotal = useMemo(() => shop.items.reduce((a, i) => a + (cart[i.id] ?? 0) * i.price, 0), [cart, shop.items]);
 
@@ -65,13 +67,24 @@ export function ShopView({ shop }: { shop: Shop }) {
               </span>
             ) : null}
           </div>
+          <div className="mt-5 flex w-full max-w-sm gap-2">
+            <Button variant="secondary" size="lg" className="flex-1 px-4" onClick={() => setContactOpen(true)}>
+              <Phone className="size-[18px]" /> Call to order
+            </Button>
+            <LinkButton href={`/collect?vendor=${shop.id}`} size="lg" className="flex-1 px-4">
+              <Bike className="size-[18px]" /> Send a rider
+            </LinkButton>
+          </div>
         </motion.div>
       </div>
 
       <section className="-mt-4 rounded-t-[28px] bg-bg px-5 pt-6">
-        <div className="mb-3 flex items-end justify-between">
-          <h2 className="font-display text-[19px] font-semibold text-ink">Popular here</h2>
-          <span className="text-[12.5px] text-muted">Prices may vary slightly</span>
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div>
+            <h2 className="font-display text-[19px] font-semibold text-ink">Or let a runner buy it</h2>
+            <p className="text-[12.5px] text-muted">Pick items and we pay the shop for you</p>
+          </div>
+          <span className="shrink-0 text-[12px] text-faint">Prices may vary</span>
         </div>
         {shop.items.length ? (
           <motion.ul
@@ -155,6 +168,8 @@ export function ShopView({ shop }: { shop: Shop }) {
           </motion.div>
         ) : null}
       </AnimatePresence>
+
+      <ShopContactSheet shop={shop} open={contactOpen} onClose={() => setContactOpen(false)} showMenuLink={false} />
     </div>
   );
 }

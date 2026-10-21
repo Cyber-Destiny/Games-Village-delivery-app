@@ -123,13 +123,16 @@ export const otpCodes = pgTable(
   (t) => [index("otp_phone_idx").on(t.phone, t.createdAt)],
 );
 
+export type VendorContact = { label: string | null; phone: string };
+
 export const vendors = pgTable("vendors", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   category: text("category").notNull(),
   description: text("description"),
   location: text("location"),
-  phone: text("phone"),
+  // Numbers residents can call or WhatsApp to order directly from the shop.
+  contacts: jsonb("contacts").$type<VendorContact[]>().notNull().default(sql`'[]'::jsonb`),
   hours: text("hours"),
   bankCode: text("bank_code"),
   bankName: text("bank_name"),
@@ -180,6 +183,8 @@ export const orders = pgTable(
     // For pick-up errands: where to collect from and where to take it (null = resident's address)
     pickupFrom: text("pickup_from"),
     deliverTo: text("deliver_to"),
+    // Collecting an order the resident already paid the shop for: the name it's under.
+    collectAs: text("collect_as"),
     items: jsonb("items").$type<OrderItem[]>().notNull().default(sql`'[]'::jsonb`),
     notes: text("notes"),
     photoId: uuid("photo_id"),

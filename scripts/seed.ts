@@ -33,6 +33,7 @@ const code = () => Array.from({ length: 6 }, () => rand(ALPHA.split(""))).join("
 const SHOPS = [
   {
     name: "Mama Ngozi's Kitchen",
+    contacts: [{ label: "Orders (demo number)", phone: "2348050000001" }],
     category: "food",
     location: "Block D, by the basketball court",
     description: "Home-style Nigerian meals, cooked fresh daily",
@@ -47,6 +48,7 @@ const SHOPS = [
   },
   {
     name: "Village Mart",
+    contacts: [{ label: "Shop line (demo number)", phone: "2348050000002" }, { label: "WhatsApp orders (demo number)", phone: "2348050000012" }],
     category: "groceries",
     location: "Estate market, shop 4",
     description: "Provisions, drinks, toiletries",
@@ -63,6 +65,7 @@ const SHOPS = [
   },
   {
     name: "Prime Gas Point",
+    contacts: [{ label: "Demo number", phone: "2348050000003" }],
     category: "gas",
     location: "Gate 2 road",
     description: "Cooking gas refills, all cylinder sizes",
@@ -75,6 +78,7 @@ const SHOPS = [
   },
   {
     name: "FreshFold Dry Cleaners",
+    contacts: [{ label: "Demo number", phone: "2348050000004" }],
     category: "laundry",
     location: "Block A shopping row",
     description: "Wash, iron and dry-clean",
@@ -88,6 +92,7 @@ const SHOPS = [
   },
   {
     name: "Suya Junction",
+    contacts: [{ label: "Demo number", phone: "2348050000005" }],
     category: "food",
     location: "Opposite the gym",
     description: "Evenings only — beef and chicken suya",
@@ -100,6 +105,7 @@ const SHOPS = [
   },
   {
     name: "CarePlus Pharmacy",
+    contacts: [{ label: "Pharmacist (demo number)", phone: "2348050000006" }, { label: "WhatsApp orders (demo number)", phone: "2348050000016" }],
     category: "other",
     location: "Estate market, shop 11",
     description: "Over-the-counter medicine and essentials",
@@ -165,7 +171,7 @@ async function main() {
         location: s.location,
         description: s.description,
         hours: s.hours,
-        phone: `23480${String(50000000 + i * 1111).padStart(8, "0")}`,
+        contacts: s.contacts.map((c) => ({ ...c })),
         bankCode: "058",
         bankName: "Guaranty Trust Bank",
         accountNumber: `01234567${String(i).padStart(2, "0")}`,

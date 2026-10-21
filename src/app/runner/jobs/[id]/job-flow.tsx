@@ -41,7 +41,7 @@ import { cn } from "@/lib/cn";
 import { haptic } from "@/lib/haptics";
 import { naira } from "@/lib/money";
 import type { OrderView } from "@/lib/orders/queries";
-import { formatPhoneLocal } from "@/lib/phone";
+import { displayContactPhone, telHref } from "@/lib/phone";
 import { useCountdown } from "../../dashboard";
 import { accept, arrived, atShop, complete, confirmPurchase, decline, headOut } from "../../actions";
 
@@ -107,12 +107,14 @@ export function JobFlow({ initial, commissionPct }: { initial: OrderView; commis
       {/* progress */}
       {o.status !== "cancelled" ? (
         <div className="mx-5 mb-4 flex gap-1.5">
-          {STEPS.map((label, i) => (
-            <div key={label} className="flex-1">
+          {STEPS.map((name, i) => (
+            <div key={name} className="flex-1">
               <span className="block h-1.5 overflow-hidden rounded-full bg-line">
                 <motion.span className="block h-full rounded-full bg-primary" initial={false} animate={{ width: i < step ? "100%" : i === step ? "50%" : "0%" }} transition={{ duration: 0.6, ease }} />
               </span>
-              <span className={cn("mt-1 block text-center text-[10.5px] font-semibold", i <= step ? "text-ink-2" : "text-faint")}>{label}</span>
+              <span className={cn("mt-1 block text-center text-[10.5px] font-semibold", i <= step ? "text-ink-2" : "text-faint")}>
+                {name === "Buy" && o.kind === "pickup" ? "Collect" : name}
+              </span>
             </div>
           ))}
         </div>
@@ -202,7 +204,7 @@ export function JobFlow({ initial, commissionPct }: { initial: OrderView; commis
               </div>
             ) : o.status === "to_vendor" ? (
               <Button size="xl" block loading={pending} onClick={() => run(() => atShop(o.id))}>
-                <Store className="size-5" /> {o.kind === "pickup" ? "I'm at the pick-up point" : o.category === "gas" ? "I'm at the gas station" : "I'm at the shop"}
+                <Store className="size-5" /> {o.collectAs ? "I'm at the shop" : o.kind === "pickup" ? "I'm at the pick-up point" : o.category === "gas" ? "I'm at the gas station" : "I'm at the shop"}
               </Button>
             ) : o.status === "at_vendor" ? (
               <Button size="xl" block loading={pending} onClick={() => run(() => headOut(o.id))}>
@@ -239,7 +241,11 @@ export function JobFlow({ initial, commissionPct }: { initial: OrderView; commis
           mutate();
         }}
         title={`Chat with ${o.resident.firstName || "resident"}`}
-        quickReplies={["I'm at the shop now", "They're out of it — any alternative?", "On my way to you", "I'm at your gate"]}
+        quickReplies={
+          o.collectAs
+            ? ["I'm at the shop now", "They're still packing it — I'll wait", "The shop says it hasn't been paid", "On my way to you", "I'm at your gate"]
+            : ["I'm at the shop now", "They're out of it — any alternative?", "On my way to you", "I'm at your gate"]
+        }
       />
 
       {/* tint strip for category */}
@@ -267,7 +273,7 @@ function NewJob({ o, earn }: { o: OrderView; earn: number }) {
         <div className="flex items-center gap-4 p-5" style={{ background: tintFor(o.category).bg }}>
           <CategoryArt id={o.category} size={64} />
           <div>
-            <p className="font-display text-[22px] font-bold leading-tight text-ink">{getCategory(o.category).label}</p>
+            <p className="font-display text-[22px] font-bold leading-tight text-ink">{o.collectAs ? "Collect a paid order" : getCategory(o.category).label}</p>
             <p className="text-[14px] text-ink-2">
               You earn <span className="font-semibold text-ink">{naira(earn)}</span>
             </p>
@@ -276,7 +282,7 @@ function NewJob({ o, earn }: { o: OrderView; earn: number }) {
         <div className="space-y-3 p-5">
           <Line icon={<Store className="size-4" />} label="From" value={o.kind === "pickup" ? o.pickupFrom ?? "—" : o.vendorName ?? "Any shop in the estate"} />
           <Line icon={<MapPin className="size-4" />} label="To" value={o.deliverTo ?? `Block ${o.drop.block}, House ${o.drop.house}`} />
-          <Line icon={<Receipt className="size-4" />} label="Spending limit" value={limit ? naira(limit) : "Nothing to buy"} />
+          <Line icon={<Receipt className="size-4" />} label="Spending limit" value={limit ? naira(limit) : o.collectAs ? "Nothing — the resident paid the shop" : "Nothing to buy"} />
         </div>
       </div>
       <ItemsCard o={o} />
@@ -298,22 +304,42 @@ function Line({ icon, label, value }: { icon: React.ReactNode; label: string; va
 
 function WhereToGo({ o }: { o: OrderView }) {
   const where = o.kind === "pickup" ? o.pickupFrom : o.vendorName;
+  const shopLine = o.vendorContacts[0];
+  const eyebrow =
+    o.category === "gas" && o.status === "to_vendor"
+      ? "First collect the cylinder, then"
+      : o.collectAs
+        ? "Collect a paid order from"
+        : o.kind === "pickup"
+          ? "Pick up from"
+          : "Buy from";
   return (
     <div className="card p-5">
-      <p className="text-[12px] font-semibold uppercase tracking-wider text-muted">{o.category === "gas" && o.status === "to_vendor" ? "First collect the cylinder, then" : o.kind === "pickup" ? "Pick up from" : "Buy from"}</p>
+      <p className="text-[12px] font-semibold uppercase tracking-wider text-muted">{eyebrow}</p>
       <p className="mt-1 font-display text-[22px] font-bold leading-tight text-ink">{where ?? "Any shop in the estate"}</p>
       {o.vendorLocation ? (
         <p className="mt-1 flex items-center gap-1.5 text-[14px] text-ink-2">
           <MapPin className="size-4 text-muted" /> {o.vendorLocation}
         </p>
       ) : null}
+      {o.collectAs ? (
+        <div className="mt-4 rounded-2xl bg-accent-soft px-4 py-3">
+          <p className="text-[12px] font-semibold uppercase tracking-wider text-accent-soft-ink/80">Ask for the order under</p>
+          <p className="mt-0.5 font-display text-[19px] font-bold text-accent-soft-ink">{o.collectAs}</p>
+          <p className="mt-1 text-[13px] text-accent-soft-ink/90">Order #{o.code}</p>
+        </div>
+      ) : null}
       <div className="mt-4 flex flex-wrap gap-2">
-        {o.vendorPhone ? (
-          <a href={`tel:+${o.vendorPhone}`} className="flex h-10 items-center gap-2 rounded-xl bg-sunken px-3.5 text-[13.5px] font-semibold text-ink">
-            <Phone className="size-4" /> Call shop · {formatPhoneLocal(o.vendorPhone)}
+        {shopLine ? (
+          <a href={telHref(shopLine.phone)} className="flex h-10 items-center gap-2 rounded-xl bg-sunken px-3.5 text-[13.5px] font-semibold text-ink">
+            <Phone className="size-4" /> Call shop · {displayContactPhone(shopLine.phone)}
           </a>
         ) : null}
-        {o.vendorIsPartner ? (
+        {o.collectAs ? (
+          <span className="flex h-10 items-center gap-1.5 rounded-xl bg-primary-soft px-3.5 text-[13px] font-semibold text-primary-soft-ink">
+            <BadgeCheck className="size-4" /> Already paid — don&apos;t pay anything
+          </span>
+        ) : o.vendorIsPartner && o.kind === "buy" ? (
           <span className="flex h-10 items-center gap-1.5 rounded-xl bg-primary-soft px-3.5 text-[13px] font-semibold text-primary-soft-ink">
             <BadgeCheck className="size-4" /> Partner — paid automatically
           </span>
@@ -325,6 +351,7 @@ function WhereToGo({ o }: { o: OrderView }) {
 
 function ItemsCard({ o, checklist }: { o: OrderView; checklist?: boolean }) {
   const [ticked, setTicked] = useState<Record<number, boolean>>({});
+  if (!o.items.length && !o.notes && !o.photoUrl) return null;
   return (
     <div className="card p-5">
       <p className="mb-3 font-display text-[16px] font-semibold text-ink">{o.kind === "pickup" ? "Details" : "Shopping list"}</p>
@@ -339,7 +366,7 @@ function ItemsCard({ o, checklist }: { o: OrderView; checklist?: boolean }) {
               className={cn("flex w-full items-center gap-3 rounded-xl px-1 py-1.5 text-left", checklist && "hover:bg-surface-2")}
             >
               {checklist ? (
-                <motion.span animate={{ scale: on ? [1, 1.2, 1] : 1 }} className={cn("grid size-6 shrink-0 place-items-center rounded-lg border-2", on ? "border-primary bg-primary text-primary-ink" : "border-line-strong")}>
+                <motion.span animate={{ scale: on ? [1, 1.2, 1] : 1 }} transition={{ duration: 0.3, ease: "easeOut" }} className={cn("grid size-6 shrink-0 place-items-center rounded-lg border-2", on ? "border-primary bg-primary text-primary-ink" : "border-line-strong")}>
                   {on ? <Check className="size-3.5" strokeWidth={3} /> : null}
                 </motion.span>
               ) : (
@@ -378,10 +405,18 @@ function AtShop({ o, limit, onChange }: { o: OrderView; limit: number; onChange:
     return (
       <>
         <div className="card flex items-center gap-3 p-5">
-          <span className="grid size-11 place-items-center rounded-2xl bg-primary-soft text-primary-soft-ink">
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary-soft text-primary-soft-ink">
             <Check className="size-5" />
           </span>
-          <p className="text-[14.5px] text-ink-2">Nothing to pay here. Collect it, then tap below.</p>
+          <p className="text-[14.5px] text-ink-2">
+            {o.collectAs ? (
+              <>
+                Already paid. Ask for the order under <span className="font-semibold text-ink">{o.collectAs}</span>, check it&apos;s sealed, then tap below.
+              </>
+            ) : (
+              "Nothing to pay here. Collect it, then tap below."
+            )}
+          </p>
         </div>
         <ItemsCard o={o} />
       </>

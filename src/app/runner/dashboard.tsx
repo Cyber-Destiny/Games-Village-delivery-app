@@ -238,9 +238,9 @@ function ActiveJobCard({ job }: { job: NonNullable<RunnerState["activeJob"]> }) 
         <div className="flex items-center gap-4 p-4" style={{ background: t.bg }}>
           <CategoryArt id={job.category} size={52} />
           <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-semibold uppercase tracking-wider text-ink-2">{isNew ? getCategory(job.category).label : STATUS_LABEL[job.status]}</p>
+            <p className="text-[12px] font-semibold uppercase tracking-wider text-ink-2">{isNew ? jobLabel(job) : STATUS_LABEL[job.status]}</p>
             <p className="truncate font-display text-[19px] font-semibold text-ink">
-              {job.items.length ? `${job.items.length} item${job.items.length > 1 ? "s" : ""}` : getCategory(job.category).label} · #{job.code}
+              {job.items.length ? `${job.items.length} item${job.items.length > 1 ? "s" : ""}` : jobLabel(job)} · #{job.code}
             </p>
           </div>
         </div>
@@ -271,4 +271,8 @@ function ActiveJobCard({ job }: { job: NonNullable<RunnerState["activeJob"]> }) 
       </motion.div>
     </Link>
   );
+}
+
+function jobLabel(job: { category: string; collectAs: string | null }) {
+  return job.collectAs ? "Collect a paid order" : getCategory(job.category).label;
 }

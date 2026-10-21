@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { BadgeCheck, Flame, MapPin, Plus, Trash2 } from "lucide-react";
+import { BadgeCheck, Flame, MapPin, Phone, Plus, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { BankFields, emptyBank, type BankValue } from "@/components/app/bank-form";
@@ -19,6 +19,7 @@ import type { AdminVendor } from "@/lib/admin";
 import { CATEGORIES, getCategory } from "@/lib/categories";
 import { cn } from "@/lib/cn";
 import { naira } from "@/lib/money";
+import { displayContactPhone } from "@/lib/phone";
 import { deleteItem, saveItem, saveVendor } from "../actions";
 
 type Details = {
@@ -27,13 +28,28 @@ type Details = {
   category: string;
   description: string;
   location: string;
-  phone: string;
+  contacts: ContactRow[];
   hours: string;
   isPartner: boolean;
   isActive: boolean;
 };
 
-const blank: Details = { id: null, name: "", category: "food", description: "", location: "", phone: "", hours: "", isPartner: true, isActive: true };
+type ContactRow = { key: number; label: string; phone: string };
+
+let contactKey = 0;
+const contactRow = (label = "", phone = ""): ContactRow => ({ key: ++contactKey, label, phone });
+
+const blank = (): Details => ({
+  id: null,
+  name: "",
+  category: "food",
+  description: "",
+  location: "",
+  contacts: [contactRow()],
+  hours: "",
+  isPartner: true,
+  isActive: true,
+});
 
 export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
   const router = useRouter();
@@ -54,12 +70,14 @@ export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
             category: v.category,
             description: v.description ?? "",
             location: v.location ?? "",
-            phone: v.phone ? "0" + v.phone.replace(/^234/, "") : "",
+            contacts: v.contacts.length
+              ? v.contacts.map((c) => contactRow(c.label ?? "", displayContactPhone(c.phone).replace(/\s/g, "")))
+              : [contactRow()],
             hours: v.hours ?? "",
             isPartner: v.isPartner,
             isActive: v.isActive,
           }
-        : blank,
+        : blank(),
     );
   };
   const set = (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setEditing((d) => (d ? { ...d, [k]: e.target.value } : d));
@@ -152,12 +170,10 @@ export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
                   <Field label="Opening hours" optional>
                     <Input value={editing.hours} onChange={set("hours")} placeholder="e.g. 8am – 9pm" />
                   </Field>
-                  <Field label="Phone" optional hint="Runners can call to check stock">
-                    <Input value={editing.phone} onChange={set("phone")} inputMode="tel" />
-                  </Field>
                   <Field label="Short description" optional>
                     <Input value={editing.description} onChange={set("description")} />
                   </Field>
+                  <ContactsEditor rows={editing.contacts} onChange={(contacts) => setEditing({ ...editing, contacts })} />
                   <div className="rounded-2xl bg-surface-2 p-4 sm:col-span-2">
                     <p className="mb-1 text-[14px] font-semibold text-ink">Bank account for payments</p>
                     <p className="mb-3 text-[12.5px] text-muted">
@@ -174,7 +190,11 @@ export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
                     disabled={!!bank.accountNumber && !bank.accountName}
                     onClick={() =>
                       start(async () => {
-                        const res = await saveVendor({ ...editing, bank: bank.accountName ? { bankCode: bank.bankCode, bankName: bank.bankName, accountNumber: bank.accountNumber } : null });
+                        const res = await saveVendor({
+                          ...editing,
+                          contacts: editing.contacts.map(({ label, phone }) => ({ label, phone })),
+                          bank: bank.accountName ? { bankCode: bank.bankCode, bankName: bank.bankName, accountNumber: bank.accountNumber } : null,
+                        });
                         if (!res.ok) return toast.error(res.error);
                         toast.success(editing.id ? "Shop saved" : "Shop added", editing.id ? undefined : "Now add their popular items.");
                         router.refresh();
@@ -198,6 +218,55 @@ export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
         ) : null}
       </Sheet>
     </>
+  );
+}
+
+function ContactsEditor({ rows, onChange }: { rows: ContactRow[]; onChange: (rows: ContactRow[]) => void }) {
+  const update = (key: number, patch: Partial<ContactRow>) => onChange(rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  return (
+    <div className="rounded-2xl border border-line p-4 sm:col-span-2">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[14px] font-semibold text-ink">Phone numbers</p>
+          <p className="text-[12.5px] text-muted">Residents see these when they tap the shop, and can call or WhatsApp to order.</p>
+        </div>
+        <Phone className="mt-0.5 size-4 shrink-0 text-faint" />
+      </div>
+      <ul className="space-y-2">
+        <AnimatePresence initial={false}>
+          {rows.map((r) => (
+            <motion.li
+              key={r.key}
+              layout
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="grid grid-cols-[1fr_1fr_auto] gap-2"
+            >
+              <Input aria-label="Phone number" placeholder="0803 123 4567" inputMode="tel" value={r.phone} onChange={(e) => update(r.key, { phone: e.target.value })} />
+              <Input aria-label="Label" placeholder="Label, e.g. WhatsApp orders" value={r.label} onChange={(e) => update(r.key, { label: e.target.value })} />
+              <button
+                type="button"
+                title="Remove number"
+                onClick={() => onChange(rows.length > 1 ? rows.filter((x) => x.key !== r.key) : [contactRow()])}
+                className="grid size-[52px] place-items-center rounded-2xl text-faint hover:bg-danger-soft hover:text-danger"
+              >
+                <X className="size-4" />
+              </button>
+            </motion.li>
+          ))}
+        </AnimatePresence>
+      </ul>
+      {rows.length < 6 ? (
+        <button
+          type="button"
+          onClick={() => onChange([...rows, contactRow()])}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-xl px-2 py-1.5 text-[13.5px] font-semibold text-primary hover:bg-primary-soft"
+        >
+          <Plus className="size-4" /> Add another number
+        </button>
+      ) : null}
+    </div>
   );
 }
 

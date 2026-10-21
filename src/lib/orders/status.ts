@@ -52,10 +52,12 @@ type CopyInput = {
   category: CategoryId | string;
   runnerName?: string | null;
   place?: string | null;
+  /** Collecting an order the resident already paid the shop for. */
+  collect?: boolean;
 };
 
 /** Headline + supporting line for the resident's tracking screen. */
-export function statusCopy({ status, kind, category, runnerName, place }: CopyInput): { title: string; line: string } {
+export function statusCopy({ status, kind, category, runnerName, place, collect }: CopyInput): { title: string; line: string } {
   const who = runnerName?.split(" ")[0] ?? "Your runner";
   const where = place || (kind === "pickup" ? "the pick-up point" : "the shop");
   const gas = category === "gas";
@@ -69,10 +71,13 @@ export function statusCopy({ status, kind, category, runnerName, place }: CopyIn
     case "to_vendor":
       return gas
         ? { title: `${who} is coming for your cylinder`, line: "Have your empty cylinder ready at the door." }
-        : { title: `${who} is heading to ${where}`, line: kind === "pickup" ? "On the way to collect it." : "On the way to buy your items." };
+        : {
+            title: `${who} is heading to ${where}`,
+            line: collect ? "On the way to collect your order." : kind === "pickup" ? "On the way to collect it." : "On the way to buy your items.",
+          };
     case "at_vendor":
       return kind === "pickup"
-        ? { title: `${who} is at ${where}`, line: "Collecting it now." }
+        ? { title: `${who} is at ${where}`, line: collect ? "Picking up your order. Nothing to pay." : "Collecting it now." }
         : { title: `${who} is at ${where}`, line: gas ? "Refilling your cylinder." : "Buying your items. We pay the shop directly." };
     case "on_the_way":
       return { title: "On the way to you", line: `${who} is bringing it to your door.` };

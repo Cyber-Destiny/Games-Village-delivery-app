@@ -1,9 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, ChevronRight, Clock3, MapPin, Megaphone, RotateCcw, Search, Sparkles } from "lucide-react";
+import { ArrowRight, ChevronRight, Clock3, MapPin, Megaphone, Phone, RotateCcw, Search, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { ShopContactSheet } from "@/components/app/shop-contact-sheet";
 import { CategoryArt, CategoryBadge, tintFor } from "@/components/brand/category-art";
 import { Avatar } from "@/components/ui/avatar";
 import { CATEGORIES, getCategory } from "@/lib/categories";
@@ -144,12 +145,12 @@ function AskBox() {
   );
 }
 
-function ShopCard({ s }: { s: Shop }) {
+function ShopCard({ s, onOpen }: { s: Shop; onOpen: () => void }) {
   const t = tintFor(s.category);
   const top = s.items.slice(0, 2);
   return (
-    <Link href={`/shops/${s.id}`} className="block w-[236px] shrink-0 snap-start">
-      <motion.div whileTap={{ scale: 0.97 }} initial="rest" whileHover="hover" animate="rest" className="card h-full overflow-hidden">
+    <button type="button" onClick={onOpen} className="block w-[236px] shrink-0 snap-start text-left">
+      <motion.div whileTap={{ scale: 0.97 }} initial="rest" whileHover="hover" animate="rest" className="card flex h-full flex-col overflow-hidden">
         <div className="relative flex h-[92px] items-end justify-between px-4 pb-3" style={{ background: t.bg }}>
           <CategoryArt id={s.category} size={58} />
           {s.isPartner ? (
@@ -158,7 +159,7 @@ function ShopCard({ s }: { s: Shop }) {
             </span>
           ) : null}
         </div>
-        <div className="p-4">
+        <div className="flex flex-1 flex-col p-4">
           <p className="truncate font-display text-[16.5px] font-semibold text-ink">{s.name}</p>
           <p className="mt-0.5 flex items-center gap-1 truncate text-[12.5px] text-muted">
             <MapPin className="size-3.5 shrink-0" />
@@ -176,9 +177,12 @@ function ShopCard({ s }: { s: Shop }) {
           ) : (
             <p className="mt-3 text-[13px] text-muted">{s.description || "Tell us what you need"}</p>
           )}
+          <span className="mt-auto flex items-center gap-1.5 pt-3.5 text-[13px] font-semibold text-primary">
+            <Phone className="size-3.5" /> {s.contacts.length ? "Call or WhatsApp to order" : "Order through a runner"}
+          </span>
         </div>
       </motion.div>
-    </Link>
+    </button>
   );
 }
 
@@ -205,6 +209,13 @@ export function HomeView({
 }) {
   const first = name.split(" ")[0];
   const remaining = data.loyaltyEvery - data.loyaltyProgress - 1;
+  // Keep the last shop around while the sheet animates out.
+  const [contactShop, setContactShop] = useState<Shop | null>(null);
+  const [contactOpen, setContactOpen] = useState(false);
+  const openShop = (s: Shop) => {
+    setContactShop(s);
+    setContactOpen(true);
+  };
 
   return (
     <motion.main variants={stagger} initial="hidden" animate="show" className="pb-36">
@@ -301,7 +312,7 @@ export function HomeView({
           <SectionTitle>Shops in the estate</SectionTitle>
           <div className="no-scrollbar flex snap-x gap-3 overflow-x-auto scroll-px-5 px-5 pb-2">
             {data.shops.map((s) => (
-              <ShopCard key={s.id} s={s} />
+              <ShopCard key={s.id} s={s} onOpen={() => openShop(s)} />
             ))}
           </div>
         </motion.section>
@@ -368,6 +379,8 @@ export function HomeView({
           </div>
         </motion.section>
       ) : null}
+
+      <ShopContactSheet shop={contactShop} open={contactOpen} onClose={() => setContactOpen(false)} />
     </motion.main>
   );
 }
