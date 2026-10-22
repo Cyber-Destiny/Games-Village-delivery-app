@@ -1,5 +1,7 @@
 # Runam — errands inside Games Village
 
+Live at **https://runam.app**
+
 Runam is a web app for errands inside the estate: residents ask for food, groceries, gas refills, parcel pick-ups or laundry, a vetted runner does it, and **the shop is paid directly by the platform** so runners never handle residents' money.
 
 It's a mobile-first web app (installable on the home screen) with three parts:
@@ -101,7 +103,7 @@ Put the keys in `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`. Runners 
 | Variable | Required | What it's for |
 |---|---|---|
 | `DATABASE_URL` | ✅ | Postgres connection string |
-| `APP_URL` | ✅ | Your public URL, e.g. `https://runam.vercel.app` (no trailing slash) |
+| `APP_URL` | ✅ | Your public URL, e.g. `https://runam.app` (no trailing slash) |
 | `SESSION_SECRET` | ✅ | Long random string — `openssl rand -base64 48` |
 | `ADMIN_PHONES` | ✅ | Comma-separated admin numbers, e.g. `2348031234567` |
 | `PAYSTACK_SECRET_KEY` | for payments | Empty = demo mode |
