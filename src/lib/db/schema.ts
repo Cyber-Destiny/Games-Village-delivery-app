@@ -134,7 +134,7 @@ export const vendors = pgTable("vendors", {
   category: text("category").notNull(),
   description: text("description"),
   location: text("location"),
-  // Numbers residents can call or WhatsApp to order directly from the shop.
+  // Shop staff (name + mobile). Each number signs in to the shop's chat inbox; never shown to residents.
   contacts: jsonb("contacts").$type<VendorContact[]>().notNull().default(sql`'[]'::jsonb`),
   // Cover photo: an /api/uploads/… URL from the admin, or a bundled /images/… path.
   image: text("image"),

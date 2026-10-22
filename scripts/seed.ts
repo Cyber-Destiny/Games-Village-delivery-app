@@ -11,6 +11,7 @@ import { sql } from "drizzle-orm";
 import postgres from "postgres";
 import * as schema from "../src/lib/db/schema";
 import { DEFAULT_SETTINGS } from "../src/lib/settings-shared";
+import { PHOTOS } from "../src/lib/photos";
 import { weekStart } from "../src/lib/time";
 
 try {
@@ -33,7 +34,7 @@ const code = () => Array.from({ length: 6 }, () => rand(ALPHA.split(""))).join("
 const SHOPS = [
   {
     name: "Mama Ngozi's Kitchen",
-    image: "/images/shops/kitchen.webp",
+    image: PHOTOS.shopKitchen,
     contacts: [{ label: "Ngozi", phone: "2348050000001" }],
     category: "food",
     location: "Block D, by the basketball court",
@@ -49,7 +50,7 @@ const SHOPS = [
   },
   {
     name: "Village Mart",
-    image: "/images/shops/mart.webp",
+    image: PHOTOS.shopMart,
     contacts: [{ label: "Chika", phone: "2348050000002" }, { label: "Emeka", phone: "2348050000012" }],
     category: "groceries",
     location: "Estate market, shop 4",
@@ -67,7 +68,7 @@ const SHOPS = [
   },
   {
     name: "Prime Gas Point",
-    image: "/images/shops/gas.webp",
+    image: PHOTOS.shopGas,
     contacts: [{ label: "Sani", phone: "2348050000003" }],
     category: "gas",
     location: "Gate 2 road",
@@ -81,7 +82,7 @@ const SHOPS = [
   },
   {
     name: "FreshFold Dry Cleaners",
-    image: "/images/shops/drycleaner.webp",
+    image: PHOTOS.shopDryCleaner,
     contacts: [{ label: "Funmi", phone: "2348050000004" }],
     category: "laundry",
     location: "Block A shopping row",
@@ -96,7 +97,7 @@ const SHOPS = [
   },
   {
     name: "Suya Junction",
-    image: "/images/shops/suya.webp",
+    image: PHOTOS.shopSuya,
     contacts: [{ label: "Musa", phone: "2348050000005" }],
     category: "food",
     location: "Opposite the gym",
@@ -110,7 +111,7 @@ const SHOPS = [
   },
   {
     name: "CarePlus Pharmacy",
-    image: "/images/shops/pharmacy.webp",
+    image: PHOTOS.shopPharmacy,
     contacts: [{ label: "Pharm. Bola", phone: "2348050000006" }],
     category: "other",
     location: "Estate market, shop 11",

@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     localPatterns: [{ pathname: "/images/**", search: "" }],
+    // Generated photography (see src/lib/photos.ts).
+    remotePatterns: [{ protocol: "https", hostname: "d8j0ntlcm91z4.cloudfront.net", pathname: "/user_3BcFgqenGreTJjJ06PnNgZqYdaE/**" }],
     qualities: [75],
   },
   async rewrites() {

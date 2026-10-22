@@ -10,6 +10,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { LinkButton } from "@/components/ui/button";
 import { APP_NAME, ESTATE_NAME } from "@/lib/brand";
 import { CATEGORIES } from "@/lib/categories";
+import { PHOTOS } from "@/lib/photos";
 
 type Props = {
   signedIn: boolean;
@@ -37,12 +38,12 @@ function Reveal({ children, delay = 0, className }: { children: React.ReactNode;
 
 const STEPS = [
   {
-    photo: "/images/shops/mart.webp",
+    photo: PHOTOS.shopMart,
     title: "Order from an estate shop",
-    body: "Call or WhatsApp the shop straight from the app and pay them directly. Or tell us what you need and your runner buys it.",
+    body: "Chat with the shop right in the app, agree the price and pay them directly. Or tell us what you need and your runner buys it.",
   },
   {
-    photo: "/images/hero-rider.webp",
+    photo: PHOTOS.heroRider,
     title: "A runner brings it over",
     body: "Book a rider in a tap. They collect it and head to your door, and you can follow every step live.",
   },
@@ -161,7 +162,7 @@ export function Landing(props: Props) {
           transition={{ duration: 0.9, ease, delay: 0.1 }}
           className="relative mx-auto aspect-[4/5] w-full max-w-[460px] overflow-hidden rounded-[28px] bg-sunken shadow-[var(--shadow-raised)]"
         >
-          <Photo src="/images/hero-rider.webp" alt="A runner cycling through the estate with a delivery box" sizes="(min-width: 1024px) 460px, 100vw" preload />
+          <Photo src={PHOTOS.heroRider} alt="A runner cycling through the estate with a delivery box" sizes="(min-width: 1024px) 460px, 100vw" preload />
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}

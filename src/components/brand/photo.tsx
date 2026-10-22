@@ -1,18 +1,19 @@
 import Image from "next/image";
 import type { CategoryId } from "@/lib/categories";
 import { cn } from "@/lib/cn";
+import { PHOTOS } from "@/lib/photos";
 
-// Photography for categories and shops. Static images live in /public/images and go
-// through the image optimiser; shop photos uploaded by the admin come from
-// /api/uploads (behind auth), so those are served as-is.
+// Photography for categories and shops (sources in lib/photos). They go through the
+// image optimiser; shop photos uploaded by the admin come from /api/uploads (behind
+// auth), so those are served as-is.
 
 const CATEGORY_PHOTO: Record<CategoryId, string> = {
-  food: "/images/categories/food.webp",
-  groceries: "/images/categories/groceries.webp",
-  gas: "/images/categories/gas.webp",
-  pickup: "/images/categories/pickup.webp",
-  laundry: "/images/categories/laundry.webp",
-  other: "/images/categories/other.webp",
+  food: PHOTOS.food,
+  groceries: PHOTOS.groceries,
+  gas: PHOTOS.gas,
+  pickup: PHOTOS.pickup,
+  laundry: PHOTOS.laundry,
+  other: PHOTOS.other,
 };
 
 export function categoryPhoto(id: string): string {
@@ -44,7 +45,7 @@ export function Photo({
       fill
       sizes={sizes}
       preload={preload}
-      unoptimized={!src.startsWith("/images/")}
+      unoptimized={src.startsWith("/api/")}
       className={cn("object-cover", className)}
     />
   );
