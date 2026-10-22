@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import useSWR from "swr";
-import { CategoryArt, tintFor } from "@/components/brand/category-art";
+import { CategoryThumb } from "@/components/brand/photo";
 import { EstateMap, mapProgress } from "@/components/brand/estate-map";
 import { PageHeader } from "@/components/app/page-header";
 import { ChatSheet } from "@/components/order/chat-sheet";
@@ -41,7 +41,6 @@ export function Tracker({ initial }: { initial: OrderView }) {
   });
   const order = data?.order ?? initial;
   const cat = getCategory(order.category);
-  const tint = tintFor(order.category);
   const copy = statusCopy({
     status: order.status,
     kind: order.kind,
@@ -247,7 +246,7 @@ export function Tracker({ initial }: { initial: OrderView }) {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="grain relative mx-5 mt-4 overflow-hidden rounded-[26px] bg-hero px-5 pb-6 pt-5 text-center text-hero-ink shadow-[var(--shadow-raised)]"
+            className="relative mx-5 mt-4 overflow-hidden rounded-[26px] bg-hero px-5 pb-6 pt-5 text-center text-hero-ink shadow-[var(--shadow-raised)]"
           >
             <div className="relative z-10">
               <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-accent">Your delivery code</p>
@@ -318,8 +317,8 @@ export function Tracker({ initial }: { initial: OrderView }) {
       {/* details */}
       <section className="mx-5 mt-4">
         <div className="card overflow-hidden">
-          <div className="flex items-center gap-3 px-4 py-3.5" style={{ background: tint.bg }}>
-            <CategoryArt id={order.category} size={40} />
+          <div className="flex items-center gap-3 border-b border-line px-4 py-3.5">
+            <CategoryThumb id={order.category} size={44} />
             <div className="min-w-0">
               <p className="font-display text-[16px] font-semibold text-ink">{order.collectAs ? "Paid order pickup" : cat.label}</p>
               <p className="flex items-center gap-1 truncate text-[13px] text-ink-2">

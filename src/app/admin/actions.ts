@@ -183,6 +183,10 @@ const vendorSchema = z.object({
     .array(z.object({ label: z.string().trim().max(40), phone: z.string().trim().max(20) }))
     .max(6, "Add at most 6 numbers"),
   hours: z.string().trim().max(40),
+  image: z
+    .string()
+    .regex(/^(\/api\/uploads\/[0-9a-f-]{36}|\/images\/[a-z0-9/_-]+\.(webp|jpg|png))$/i, "That photo isn't valid.")
+    .nullable(),
   isPartner: z.boolean(),
   isActive: z.boolean(),
   bank: z.object({ bankCode: z.string(), bankName: z.string(), accountNumber: z.string() }).nullable(),
@@ -214,6 +218,7 @@ export async function saveVendor(input: z.infer<typeof vendorSchema>) {
       description: v.description || null,
       location: v.location || null,
       contacts,
+      image: v.image,
       hours: v.hours || null,
       isPartner: v.isPartner,
       isActive: v.isActive,

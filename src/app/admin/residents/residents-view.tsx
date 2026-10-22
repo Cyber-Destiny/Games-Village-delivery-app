@@ -66,7 +66,7 @@ export function ResidentsView({ residents, q }: { residents: AdminResident[]; q:
 
       <Panel>
         {list.length === 0 ? (
-          <EmptyRow>{view === "quiet" ? "Nobody has gone quiet. 🎉" : "No residents found."}</EmptyRow>
+          <EmptyRow>{view === "quiet" ? "Nobody has gone quiet." : "No residents found."}</EmptyRow>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-left text-[14px]">

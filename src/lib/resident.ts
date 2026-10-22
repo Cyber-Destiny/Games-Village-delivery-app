@@ -24,6 +24,7 @@ export async function getShops() {
     location: v.location,
     hours: v.hours,
     contacts: v.contacts,
+    image: v.image,
     isPartner: v.isPartner && !!v.accountNumber,
     items: itemRows
       .filter((i) => i.vendorId === v.id)

@@ -7,7 +7,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { ColumnChart } from "@/components/admin/column-chart";
 import { AdminHeader, EmptyRow, Panel } from "@/components/admin/ui";
-import { CategoryBadge } from "@/components/brand/category-art";
+import { CategoryThumb } from "@/components/brand/photo";
 import { StatusBadge } from "@/components/ui/badge";
 import { Segmented } from "@/components/ui/segmented";
 import type { Overview } from "@/lib/admin";
@@ -163,7 +163,7 @@ export function OverviewView({ initial }: { initial: Overview }) {
               {o.live.map((l) => (
                 <motion.li key={l.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                   <Link href={`/admin/orders/${l.id}`} className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-surface-2">
-                    <CategoryBadge id={l.category} size={42} />
+                    <CategoryThumb id={l.category} size={42} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[14.5px] font-semibold text-ink">
                         #{l.code} · {l.title}

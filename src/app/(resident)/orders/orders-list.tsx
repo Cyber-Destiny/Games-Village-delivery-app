@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { CategoryBadge } from "@/components/brand/category-art";
+import { CategoryThumb } from "@/components/brand/photo";
 import { StatusBadge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import { Segmented } from "@/components/ui/segmented";
@@ -46,7 +46,7 @@ export function OrdersList({ orders }: { orders: OrderCardData[] }) {
             <motion.li key={o.id} variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}>
               <Link href={`/orders/${o.id}`}>
                 <motion.div whileTap={{ scale: 0.985 }} className="card flex items-center gap-3.5 p-3.5">
-                  <CategoryBadge id={o.category} size={48} />
+                  <CategoryThumb id={o.category} size={48} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate text-[15px] font-semibold text-ink">{o.title}</p>

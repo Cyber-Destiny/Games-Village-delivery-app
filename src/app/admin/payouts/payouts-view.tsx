@@ -61,7 +61,7 @@ export function PayoutsView({ data, mode }: { data: Data; mode: "demo" | "test" 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <Panel title={`Needs your action · ${data.needsAction.length}`}>
           {data.needsAction.length === 0 ? (
-            <EmptyRow>All clear. Nothing waiting for you. ✨</EmptyRow>
+            <EmptyRow>All clear. Nothing waiting for you.</EmptyRow>
           ) : (
             <ul className="divide-y divide-line/70">
               <AnimatePresence initial={false}>

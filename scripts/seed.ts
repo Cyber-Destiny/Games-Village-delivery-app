@@ -33,6 +33,7 @@ const code = () => Array.from({ length: 6 }, () => rand(ALPHA.split(""))).join("
 const SHOPS = [
   {
     name: "Mama Ngozi's Kitchen",
+    image: "/images/shops/kitchen.webp",
     contacts: [{ label: "Orders (demo number)", phone: "2348050000001" }],
     category: "food",
     location: "Block D, by the basketball court",
@@ -48,6 +49,7 @@ const SHOPS = [
   },
   {
     name: "Village Mart",
+    image: "/images/shops/mart.webp",
     contacts: [{ label: "Shop line (demo number)", phone: "2348050000002" }, { label: "WhatsApp orders (demo number)", phone: "2348050000012" }],
     category: "groceries",
     location: "Estate market, shop 4",
@@ -65,6 +67,7 @@ const SHOPS = [
   },
   {
     name: "Prime Gas Point",
+    image: "/images/shops/gas.webp",
     contacts: [{ label: "Demo number", phone: "2348050000003" }],
     category: "gas",
     location: "Gate 2 road",
@@ -78,6 +81,7 @@ const SHOPS = [
   },
   {
     name: "FreshFold Dry Cleaners",
+    image: "/images/shops/drycleaner.webp",
     contacts: [{ label: "Demo number", phone: "2348050000004" }],
     category: "laundry",
     location: "Block A shopping row",
@@ -92,6 +96,7 @@ const SHOPS = [
   },
   {
     name: "Suya Junction",
+    image: "/images/shops/suya.webp",
     contacts: [{ label: "Demo number", phone: "2348050000005" }],
     category: "food",
     location: "Opposite the gym",
@@ -105,6 +110,7 @@ const SHOPS = [
   },
   {
     name: "CarePlus Pharmacy",
+    image: "/images/shops/pharmacy.webp",
     contacts: [{ label: "Pharmacist (demo number)", phone: "2348050000006" }, { label: "WhatsApp orders (demo number)", phone: "2348050000016" }],
     category: "other",
     location: "Estate market, shop 11",
@@ -172,6 +178,7 @@ async function main() {
         description: s.description,
         hours: s.hours,
         contacts: s.contacts.map((c) => ({ ...c })),
+        image: s.image,
         bankCode: "058",
         bankName: "Guaranty Trust Bank",
         accountNumber: `01234567${String(i).padStart(2, "0")}`,

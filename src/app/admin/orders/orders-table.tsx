@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { AdminHeader, EmptyRow, Panel } from "@/components/admin/ui";
-import { CategoryBadge } from "@/components/brand/category-art";
+import { CategoryThumb } from "@/components/brand/photo";
 import { StatusBadge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
@@ -97,7 +97,7 @@ export function OrdersTable({ rows, filter, q }: { rows: AdminOrderRow[]; filter
                   >
                     <td className="px-5 py-3">
                       <Link href={`/admin/orders/${r.id}`} className="flex items-center gap-3">
-                        <CategoryBadge id={r.category} size={38} />
+                        <CategoryThumb id={r.category} size={38} />
                         <span className="min-w-0">
                           <span className="block max-w-[260px] truncate font-semibold text-ink">{r.title}</span>
                           <span className="block text-[12.5px] text-muted">

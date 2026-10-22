@@ -1,25 +1,21 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, Bike, Clock3, MapPin, PencilLine, Phone, Plus, Sparkles } from "lucide-react";
+import { ArrowRight, Bike, ChevronLeft, Clock3, MapPin, PencilLine, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { CategoryArt, tintFor } from "@/components/brand/category-art";
-import { PageHeader } from "@/components/app/page-header";
-import { ShopContactSheet } from "@/components/app/shop-contact-sheet";
+import { ShopContacts } from "@/components/app/shop-contact-sheet";
+import { Photo, shopPhoto } from "@/components/brand/photo";
 import { Button, LinkButton } from "@/components/ui/button";
 import { QtyStepper } from "@/components/ui/stepper";
-import { getCategory } from "@/lib/categories";
 import { haptic } from "@/lib/haptics";
 import { naira } from "@/lib/money";
 import type { Shop } from "@/lib/resident";
 
 export function ShopView({ shop }: { shop: Shop }) {
   const router = useRouter();
-  const t = tintFor(shop.category);
   const [cart, setCart] = useState<Record<string, number>>({});
-  const [contactOpen, setContactOpen] = useState(false);
   const count = Object.values(cart).reduce((a, b) => a + b, 0);
   const subtotal = useMemo(() => shop.items.reduce((a, i) => a + (cart[i.id] ?? 0) * i.price, 0), [cart, shop.items]);
 
@@ -40,63 +36,51 @@ export function ShopView({ shop }: { shop: Shop }) {
 
   return (
     <div className="pb-40">
-      <div className="relative overflow-hidden pb-8" style={{ background: t.bg }}>
-        <div className="px-5">
-          <PageHeader back="/home" className="!bg-transparent !shadow-none !backdrop-blur-none" />
-        </div>
-        <motion.div initial="rest" animate="hover" className="flex flex-col items-center px-5 pt-2 text-center">
-          <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 18 }}>
-            <CategoryArt id={shop.category} size={96} />
-          </motion.div>
-          <h1 className="mt-4 font-display text-[28px] font-bold leading-tight text-ink">{shop.name}</h1>
-          <p className="mt-1 text-[14px] text-ink-2">{shop.description || getCategory(shop.category).blurb}</p>
-          <div className="mt-4 flex flex-wrap justify-center gap-2 text-[12.5px] font-medium text-ink-2">
-            {shop.location ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-surface/70 px-3 py-1.5">
-                <MapPin className="size-3.5" /> {shop.location}
-              </span>
-            ) : null}
-            {shop.hours ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-surface/70 px-3 py-1.5">
-                <Clock3 className="size-3.5" /> {shop.hours}
-              </span>
-            ) : null}
-            {shop.isPartner ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-surface/70 px-3 py-1.5 text-primary-soft-ink">
-                <Sparkles className="size-3.5" /> Partner shop
-              </span>
-            ) : null}
-          </div>
-          <div className="mt-5 flex w-full max-w-sm gap-2">
-            <Button variant="secondary" size="lg" className="flex-1 px-4" onClick={() => setContactOpen(true)}>
-              <Phone className="size-[18px]" /> Call to order
-            </Button>
-            <LinkButton href={`/collect?vendor=${shop.id}`} size="lg" className="flex-1 px-4">
-              <Bike className="size-[18px]" /> Send a rider
-            </LinkButton>
-          </div>
-        </motion.div>
+      <div className="relative h-60 bg-sunken">
+        <Photo src={shopPhoto(shop)} alt={shop.name} sizes="480px" preload />
+        <div aria-hidden className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent" />
+        <Link
+          href="/home"
+          aria-label="Back"
+          className="absolute left-4 top-[max(env(safe-area-inset-top),12px)] grid size-10 place-items-center rounded-full bg-surface/95 text-ink shadow-[var(--shadow-card)] backdrop-blur"
+        >
+          <ChevronLeft className="size-5" strokeWidth={2.4} />
+        </Link>
       </div>
 
-      <section className="-mt-4 rounded-t-[28px] bg-bg px-5 pt-6">
-        <div className="mb-3 flex items-end justify-between gap-3">
-          <div>
-            <h2 className="font-display text-[19px] font-semibold text-ink">Or let a runner buy it</h2>
-            <p className="text-[12.5px] text-muted">Pick items and we pay the shop for you</p>
-          </div>
-          <span className="shrink-0 text-[12px] text-faint">Prices may vary</span>
+      <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="px-5 pt-5">
+        <h1 className="font-display text-[28px] font-bold leading-tight tracking-[-0.02em] text-ink">{shop.name}</h1>
+        {shop.description ? <p className="mt-1 text-[14.5px] text-ink-2">{shop.description}</p> : null}
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted">
+          {shop.location ? (
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="size-3.5" /> {shop.location}
+            </span>
+          ) : null}
+          {shop.hours ? (
+            <span className="inline-flex items-center gap-1">
+              <Clock3 className="size-3.5" /> {shop.hours}
+            </span>
+          ) : null}
         </div>
+
+        <h2 className="mt-7 text-[15px] font-semibold text-ink">Order directly</h2>
+        <p className="mt-0.5 text-[13px] text-muted">Call or WhatsApp {shop.name} and pay them. When it&apos;s packed, send a rider.</p>
+        <ShopContacts shop={shop} className="mt-3" />
+        <LinkButton href={`/collect?vendor=${shop.id}`} size="lg" block className="mt-3">
+          <Bike className="size-[18px]" /> Paid &amp; packed? Send a rider
+        </LinkButton>
+      </motion.section>
+
+      <section className="mt-10 px-5">
+        <h2 className="text-[15px] font-semibold text-ink">Or let a runner buy it</h2>
+        <p className="mt-0.5 text-[13px] text-muted">Pick items and we pay the shop for you. Prices may vary slightly.</p>
         {shop.items.length ? (
-          <motion.ul
-            initial="hidden"
-            animate="show"
-            variants={{ show: { transition: { staggerChildren: 0.04 } } }}
-            className="divide-y divide-line overflow-hidden rounded-[22px] border border-line/70 bg-surface shadow-[var(--shadow-card)]"
-          >
+          <ul className="mt-3 divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
             {shop.items.map((it) => {
               const q = cart[it.id] ?? 0;
               return (
-                <motion.li key={it.id} variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }} className="flex items-center gap-3 px-4 py-3.5">
+                <li key={it.id} className="flex items-center gap-3 px-4 py-3.5">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[15px] font-medium text-ink">{it.name}</p>
                     <p className="tnum text-[13.5px] text-muted">{naira(it.price)}</p>
@@ -118,25 +102,20 @@ export function ShopView({ shop }: { shop: Shop }) {
                           setQty(it.id, 1);
                         }}
                         aria-label={`Add ${it.name}`}
-                        className="grid size-9 place-items-center rounded-xl bg-primary-soft text-primary-soft-ink"
+                        className="grid size-9 place-items-center rounded-full border border-line text-ink"
                       >
-                        <Plus className="size-[18px]" strokeWidth={2.4} />
+                        <Plus className="size-[18px]" strokeWidth={2.2} />
                       </motion.button>
                     )}
                   </AnimatePresence>
-                </motion.li>
+                </li>
               );
             })}
-          </motion.ul>
+          </ul>
         ) : null}
 
-        <Link
-          href={`/new?vendor=${shop.id}`}
-          className="mt-4 flex items-center gap-3 rounded-[22px] border border-dashed border-line-strong bg-surface-2 px-4 py-4"
-        >
-          <span className="grid size-10 place-items-center rounded-xl bg-surface shadow-[var(--shadow-card)]">
-            <PencilLine className="size-5 text-ink-2" />
-          </span>
+        <Link href={`/new?vendor=${shop.id}`} className="mt-3 flex items-center gap-3 rounded-[18px] border border-line bg-surface px-4 py-3.5">
+          <PencilLine className="size-5 shrink-0 text-muted" />
           <span className="flex-1">
             <span className="block text-[14.5px] font-semibold text-ink">Need something not listed?</span>
             <span className="block text-[12.5px] text-muted">Describe it and your runner will get it</span>
@@ -168,8 +147,6 @@ export function ShopView({ shop }: { shop: Shop }) {
           </motion.div>
         ) : null}
       </AnimatePresence>
-
-      <ShopContactSheet shop={shop} open={contactOpen} onClose={() => setContactOpen(false)} showMenuLink={false} />
     </div>
   );
 }

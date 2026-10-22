@@ -23,7 +23,7 @@ import { useEffect, useState, useTransition } from "react";
 import useSWR from "swr";
 import { BankFields, emptyBank, type BankValue } from "@/components/app/bank-form";
 import { PageHeader } from "@/components/app/page-header";
-import { CategoryArt, tintFor } from "@/components/brand/category-art";
+import { CategoryThumb } from "@/components/brand/photo";
 import { ChatSheet } from "@/components/order/chat-sheet";
 import { Confetti, Photo, Timeline } from "@/components/order/parts";
 import { Avatar } from "@/components/ui/avatar";
@@ -66,7 +66,6 @@ export function JobFlow({ initial, commissionPct }: { initial: OrderView; commis
   const [done, setDone] = useState(false);
   const step = stepOf(o.status);
   const cat = getCategory(o.category);
-  const tint = tintFor(o.category);
   const limit = o.money.budget + o.money.topupTotal;
   const earn = Math.round((o.money.serviceFee * commissionPct) / 100);
 
@@ -248,8 +247,6 @@ export function JobFlow({ initial, commissionPct }: { initial: OrderView; commis
         }
       />
 
-      {/* tint strip for category */}
-      <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 -z-10 mx-auto h-40 max-w-[480px] opacity-60" style={{ background: `linear-gradient(${tint.bg}, transparent)` }} />
     </div>
   );
 }
@@ -270,8 +267,8 @@ function NewJob({ o, earn }: { o: OrderView; earn: number }) {
             <Clock3 className="size-4" /> {Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")}
           </span>
         </div>
-        <div className="flex items-center gap-4 p-5" style={{ background: tintFor(o.category).bg }}>
-          <CategoryArt id={o.category} size={64} />
+        <div className="flex items-center gap-4 border-b border-line p-5">
+          <CategoryThumb id={o.category} size={64} radius={16} />
           <div>
             <p className="font-display text-[22px] font-bold leading-tight text-ink">{o.collectAs ? "Collect a paid order" : getCategory(o.category).label}</p>
             <p className="text-[14px] text-ink-2">
@@ -451,7 +448,7 @@ function AtShop({ o, limit, onChange }: { o: OrderView; limit: number; onChange:
     if (paid)
       return (
         <>
-          <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="grain relative overflow-hidden rounded-[28px] bg-hero p-6 text-center text-hero-ink shadow-[var(--shadow-raised)]">
+          <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative overflow-hidden rounded-[28px] bg-hero p-6 text-center text-hero-ink shadow-[var(--shadow-raised)]">
             <div className="relative z-10">
               <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 380, damping: 15 }} className="mx-auto grid size-16 place-items-center rounded-full bg-accent text-accent-ink">
                 <Check className="size-8" strokeWidth={3} />
@@ -555,7 +552,7 @@ function StatusPanel({ tone, icon, title, body, progress }: { tone: "brand" | "a
 
 function DropOff({ o }: { o: OrderView }) {
   return (
-    <div className="grain relative overflow-hidden rounded-[28px] bg-hero p-6 text-hero-ink shadow-[var(--shadow-raised)]">
+    <div className="relative overflow-hidden rounded-[28px] bg-hero p-6 text-hero-ink shadow-[var(--shadow-raised)]">
       <div className="relative z-10">
         <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-accent">{o.status === "arrived" ? "You're at" : "Deliver to"}</p>
         {o.deliverTo ? (

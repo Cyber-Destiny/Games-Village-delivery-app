@@ -133,6 +133,8 @@ export const vendors = pgTable("vendors", {
   location: text("location"),
   // Numbers residents can call or WhatsApp to order directly from the shop.
   contacts: jsonb("contacts").$type<VendorContact[]>().notNull().default(sql`'[]'::jsonb`),
+  // Cover photo: an /api/uploads/… URL from the admin, or a bundled /images/… path.
+  image: text("image"),
   hours: text("hours"),
   bankCode: text("bank_code"),
   bankName: text("bank_name"),

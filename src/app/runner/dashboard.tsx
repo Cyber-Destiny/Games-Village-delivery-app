@@ -5,7 +5,7 @@ import { ArrowRight, BellRing, Landmark, MapPin, Moon, Star, Store, Zap } from "
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import useSWR from "swr";
-import { CategoryArt, CategoryBadge, tintFor } from "@/components/brand/category-art";
+import { CategoryThumb } from "@/components/brand/photo";
 import { AnimatedNaira } from "@/components/ui/animated-number";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { Switch } from "@/components/ui/switch";
@@ -102,7 +102,7 @@ export function RunnerDashboard({ name, initial }: { name: string; initial: Runn
         layout
         className={cn(
           "relative mt-5 overflow-hidden rounded-[28px] p-5 transition-colors duration-500",
-          s.online ? "grain bg-hero text-hero-ink shadow-[var(--shadow-raised)]" : "border border-line bg-surface shadow-[var(--shadow-card)]",
+          s.online ? "bg-hero text-hero-ink shadow-[var(--shadow-raised)]" : "border border-line bg-surface shadow-[var(--shadow-card)]",
         )}
       >
         {s.online ? (
@@ -177,7 +177,7 @@ export function RunnerDashboard({ name, initial }: { name: string; initial: Runn
           </ProgressRing>
           <div className="min-w-0">
             <p className="font-display text-[17px] font-semibold leading-snug text-ink">
-              {s.week.bonusEarned ? "Weekly bonus earned! 🎉" : `${Math.max(0, s.week.target - s.week.jobs)} more for a ${naira(s.week.bonus)} bonus`}
+              {s.week.bonusEarned ? "Weekly bonus earned" : `${Math.max(0, s.week.target - s.week.jobs)} more for a ${naira(s.week.bonus)} bonus`}
             </p>
             <p className="mt-1 text-[13px] text-muted">This week: {naira(s.week.earned)} earned</p>
           </div>
@@ -190,7 +190,7 @@ export function RunnerDashboard({ name, initial }: { name: string; initial: Runn
           <div className="divide-y divide-line overflow-hidden rounded-[22px] border border-line/70 bg-surface shadow-[var(--shadow-card)]">
             {s.recent.map((r) => (
               <div key={r.id} className="flex items-center gap-3 px-4 py-3">
-                <CategoryBadge id={r.category} size={40} />
+                <CategoryThumb id={r.category} size={40} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[14.5px] font-medium text-ink">{r.title}</p>
                   <p className="text-[12.5px] text-muted">
@@ -212,7 +212,6 @@ export function RunnerDashboard({ name, initial }: { name: string; initial: Runn
 }
 
 function ActiveJobCard({ job }: { job: NonNullable<RunnerState["activeJob"]> }) {
-  const t = tintFor(job.category);
   const isNew = job.status === "assigned";
   const left = useCountdown(isNew ? job.at.assigned : null, 180);
   const where = job.kind === "pickup" ? job.pickupFrom : job.vendorName ?? "Any shop";
@@ -235,8 +234,8 @@ function ActiveJobCard({ job }: { job: NonNullable<RunnerState["activeJob"]> }) 
             </span>
           </div>
         ) : null}
-        <div className="flex items-center gap-4 p-4" style={{ background: t.bg }}>
-          <CategoryArt id={job.category} size={52} />
+        <div className="flex items-center gap-4 border-b border-line p-4">
+          <CategoryThumb id={job.category} size={56} radius={14} />
           <div className="min-w-0 flex-1">
             <p className="text-[12px] font-semibold uppercase tracking-wider text-ink-2">{isNew ? jobLabel(job) : STATUS_LABEL[job.status]}</p>
             <p className="truncate font-display text-[19px] font-semibold text-ink">

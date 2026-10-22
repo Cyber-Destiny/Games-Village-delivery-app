@@ -400,7 +400,7 @@ async function tryAssign(orderId: string): Promise<"assigned" | "no-runners" | "
     const where = order.kind === "pickup" ? order.pickupFrom || order.vendorName : order.vendorName;
     const what = order.collectAs ? "Collect a paid order" : getCategory(order.category).label;
     await notify(runner.id, {
-      title: "New errand 🛵",
+      title: "New errand",
       body: `${what}${where ? ` · ${where}` : ""} → Block ${order.dropBlock}. Tap to accept.`,
       url: `/runner/jobs/${order.id}`,
       sms: `New errand #${order.code}: ${what} to Block ${order.dropBlock}. Open the app to accept.`,
@@ -761,7 +761,7 @@ export async function startDelivery(runner: User, orderId: string) {
     return o;
   });
   await notify(order.residentId, {
-    title: "On the way 🛵",
+    title: "On the way",
     body: `${firstName(runner.name)} is bringing your errand.`,
     url: `/orders/${order.id}`,
     tag: `order-${order.id}`,
@@ -855,7 +855,7 @@ export async function completeDelivery(runner: User, orderId: string, code: stri
     throw new UserError(res.left > 0 ? `That code is wrong. ${res.left} ${res.left === 1 ? "try" : "tries"} left.` : "Too many wrong codes. Ask the admin to confirm this delivery.");
   }
   await notify(res.order.residentId, {
-    title: "Delivered ✓",
+    title: "Delivered",
     body: res.change > 0 ? `${naira(res.change)} change is in your wallet. Rate your runner?` : "Thanks! Rate your runner?",
     url: `/orders/${res.order.id}`,
     tag: `order-${res.order.id}`,
@@ -871,7 +871,7 @@ export async function adminMarkDelivered(admin: User, orderId: string) {
     await finishDelivery(tx, o, admin.id, "Marked delivered by admin");
     return o;
   });
-  await notify(order.residentId, { title: "Delivered ✓", body: `Errand #${order.code} is complete.`, url: `/orders/${order.id}` });
+  await notify(order.residentId, { title: "Delivered", body: `Errand #${order.code} is complete.`, url: `/orders/${order.id}` });
   await dispatch();
 }
 
@@ -1027,7 +1027,7 @@ export async function adminReassign(admin: User, orderId: string, runnerId: stri
     await notify(previous.runnerId, { title: "Errand reassigned", body: `Order #${previous.code} was moved to another runner.`, url: "/runner" });
   }
   if (runnerId) {
-    await notify(runnerId, { title: "New errand 🛵", body: `Order #${previous.code} — tap to accept.`, url: `/runner/jobs/${orderId}` });
+    await notify(runnerId, { title: "New errand", body: `Order #${previous.code} — tap to accept.`, url: `/runner/jobs/${orderId}` });
   } else {
     await dispatch();
   }
@@ -1115,7 +1115,7 @@ export async function markPayoutManual(admin: User, payoutId: string) {
     return row;
   });
   if (p.type === "vendor" && p.userId) {
-    await notify(p.userId, { title: "Shop has been paid ✓", body: "Collect the items and head out.", url: `/runner/jobs/${p.orderId}` });
+    await notify(p.userId, { title: "Shop has been paid", body: "Collect the items and head out.", url: `/runner/jobs/${p.orderId}` });
   }
 }
 

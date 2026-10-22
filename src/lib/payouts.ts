@@ -130,7 +130,7 @@ export async function applyTransferOutcome(ref: string, outcome: "success" | "fa
     const [o] = await db.select({ runnerId: orders.runnerId, code: orders.code }).from(orders).where(eq(orders.id, changed.p.orderId));
     if (o?.runnerId) {
       await notify(o.runnerId, {
-        title: changed.outcome === "success" ? "Shop has been paid ✓" : "Shop payment failed",
+        title: changed.outcome === "success" ? "Shop has been paid" : "Shop payment failed",
         body: changed.outcome === "success" ? `Order #${o.code}: collect the items and head out.` : `Order #${o.code}: we're sorting it out. Hold on.`,
         url: `/runner/jobs/${changed.p.orderId}`,
         tag: `order-${changed.p.orderId}`,

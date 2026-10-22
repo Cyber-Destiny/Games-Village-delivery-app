@@ -3,6 +3,11 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["postgres"],
+  images: {
+    formats: ["image/avif", "image/webp"],
+    localPatterns: [{ pathname: "/images/**", search: "" }],
+    qualities: [75],
+  },
   async rewrites() {
     return [{ source: "/favicon.ico", destination: "/icon.svg" }];
   },

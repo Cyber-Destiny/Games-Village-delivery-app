@@ -5,7 +5,7 @@ import { BellRing, Check, Copy, CreditCard, MessageSquareText, Save } from "luci
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { AdminHeader, Panel } from "@/components/admin/ui";
-import { CategoryBadge } from "@/components/brand/category-art";
+import { CategoryThumb } from "@/components/brand/photo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
@@ -55,7 +55,7 @@ export function SettingsView({ initial, status }: { initial: Settings; status: S
         <Panel title="Service fees" bodyClass="divide-y divide-line/70">
           {CATEGORIES.map((c) => (
             <div key={c.id} className="flex items-center gap-4 px-5 py-3">
-              <CategoryBadge id={c.id} size={40} />
+              <CategoryThumb id={c.id} size={40} />
               <p className="flex-1 font-medium text-ink">{c.label}</p>
               <div className="w-40">
                 <MoneyInput value={s.fees[c.id]} onChange={(v) => setS({ ...s, fees: { ...s.fees, [c.id]: v } })} />

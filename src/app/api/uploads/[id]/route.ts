@@ -1,7 +1,7 @@
 import { eq, or } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { db } from "@/lib/db";
-import { orders, uploads } from "@/lib/db/schema";
+import { orders, uploads, vendors } from "@/lib/db/schema";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -11,6 +11,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!file) return new Response("Not found", { status: 404 });
 
   let allowed = user.role === "admin" || file.ownerId === user.id;
+  if (!allowed) {
+    // Shop cover photos are shown to everyone who's signed in.
+    const [shop] = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.image, `/api/uploads/${id}`)).limit(1);
+    allowed = !!shop;
+  }
   if (!allowed) {
     const linked = await db
       .select({ residentId: orders.residentId, runnerId: orders.runnerId })

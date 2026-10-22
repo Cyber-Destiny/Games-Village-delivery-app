@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { Gift, Landmark, Plus } from "lucide-react";
-import { CategoryBadge } from "@/components/brand/category-art";
+import { CategoryThumb } from "@/components/brand/photo";
 import { AnimatedNaira } from "@/components/ui/animated-number";
 import { Badge } from "@/components/ui/badge";
 import { ProgressRing } from "@/components/ui/progress-ring";
@@ -19,8 +19,7 @@ export function EarningsView({ state, data }: { state: RunnerState; data: Data }
     <main className="safe-top px-5 pb-36 pt-4">
       <h1 className="mb-5 font-display text-[30px] font-bold text-ink">Earnings</h1>
 
-      <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="grain relative overflow-hidden rounded-[28px] bg-hero p-6 text-hero-ink shadow-[var(--shadow-raised)]">
-        <div aria-hidden className="absolute -right-16 -top-20 size-64 rounded-full opacity-40 blur-3xl" style={{ background: "radial-gradient(circle, var(--accent), transparent 65%)" }} />
+      <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-[28px] bg-hero p-6 text-hero-ink shadow-[var(--shadow-raised)]">
         <div className="relative z-10 flex items-center justify-between gap-4">
           <div>
             <p className="text-[13px] text-hero-muted">Waiting to be paid</p>
@@ -75,7 +74,7 @@ export function EarningsView({ state, data }: { state: RunnerState; data: Data }
                     <Gift className="size-[18px]" />
                   </span>
                 ) : e.category ? (
-                  <CategoryBadge id={e.category} size={40} />
+                  <CategoryThumb id={e.category} size={40} />
                 ) : (
                   <span className="grid size-10 place-items-center rounded-2xl bg-sunken">
                     <Plus className="size-4" />

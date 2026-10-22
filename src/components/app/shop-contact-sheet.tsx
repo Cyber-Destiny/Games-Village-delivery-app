@@ -3,15 +3,14 @@
 import { motion } from "motion/react";
 import { ArrowRight, Bike, Clock3, MapPin, MessageCircle, Phone, PhoneOff } from "lucide-react";
 import Link from "next/link";
-import { CategoryArt, tintFor } from "@/components/brand/category-art";
+import { Photo, shopPhoto } from "@/components/brand/photo";
 import { LinkButton } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { APP_NAME } from "@/lib/brand";
+import { cn } from "@/lib/cn";
 import { haptic } from "@/lib/haptics";
 import { displayContactPhone, telHref, whatsappHref } from "@/lib/phone";
 import type { Shop } from "@/lib/resident";
-
-const STEPS = ["Call or WhatsApp to order", "Pay the shop directly", "Send a rider to collect"];
 
 /**
  * Shown when a resident taps a shop: the shop's numbers so they can order directly,
@@ -36,98 +35,34 @@ export function ShopContactSheet({
 }
 
 function Body({ shop, showMenuLink }: { shop: Shop; showMenuLink: boolean }) {
-  const t = tintFor(shop.category);
-  const greeting = `Hello ${shop.name}, I found you on ${APP_NAME}. I'd like to order:`;
+  const meta = [shop.location, shop.hours].filter(Boolean);
 
   return (
-    <div className="overflow-y-auto px-5 pb-[max(env(safe-area-inset-bottom),20px)] pt-2 sm:px-6 sm:pt-6">
-      <div className="flex items-center gap-4 rounded-[22px] p-4" style={{ background: t.bg }}>
-        <motion.div initial={{ scale: 0.7, rotate: -8, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 300, damping: 18 }}>
-          <CategoryArt id={shop.category} size={60} />
-        </motion.div>
-        <div className="min-w-0">
-          <h2 className="font-display text-[21px] font-bold leading-tight text-ink">{shop.name}</h2>
-          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[12.5px] text-ink-2">
-            {shop.location ? (
-              <span className="inline-flex items-center gap-1">
-                <MapPin className="size-3.5" /> {shop.location}
-              </span>
-            ) : null}
-            {shop.hours ? (
-              <span className="inline-flex items-center gap-1">
-                <Clock3 className="size-3.5" /> {shop.hours}
-              </span>
-            ) : null}
-          </div>
+    <div className="overflow-y-auto px-5 pb-[max(env(safe-area-inset-bottom),20px)] pt-1 sm:px-6 sm:pt-6">
+      <div className="relative aspect-[16/7] overflow-hidden rounded-[20px] bg-sunken">
+        <Photo src={shopPhoto(shop)} alt={shop.name} sizes="(min-width: 640px) 460px, 100vw" />
+      </div>
+      <h2 className="mt-4 font-display text-[22px] font-bold leading-tight text-ink">{shop.name}</h2>
+      {meta.length ? (
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[13px] text-muted">
+          {shop.location ? (
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="size-3.5" /> {shop.location}
+            </span>
+          ) : null}
+          {shop.hours ? (
+            <span className="inline-flex items-center gap-1">
+              <Clock3 className="size-3.5" /> {shop.hours}
+            </span>
+          ) : null}
         </div>
-      </div>
+      ) : null}
 
-      <ol className="mt-5 grid grid-cols-3 gap-2">
-        {STEPS.map((s, i) => (
-          <motion.li
-            key={s}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.08 + i * 0.07 }}
-            className="relative flex flex-col items-center text-center"
-          >
-            {i < STEPS.length - 1 ? <span aria-hidden className="absolute left-[calc(50%+18px)] top-[13px] h-0.5 w-[calc(100%-36px)] rounded-full bg-line" /> : null}
-            <span className="tnum grid size-7 place-items-center rounded-full bg-primary-soft text-[13px] font-bold text-primary-soft-ink">{i + 1}</span>
-            <span className="mt-1.5 text-[12px] font-medium leading-snug text-ink-2">{s}</span>
-          </motion.li>
-        ))}
-      </ol>
+      <p className="mt-4 text-[14px] leading-relaxed text-ink-2">
+        Call or WhatsApp to order, and pay {shop.name} directly. When it&apos;s packed, send a rider to bring it to you.
+      </p>
 
-      <div className="mt-5">
-        {shop.contacts.length ? (
-          <ul className="space-y-2.5">
-            {shop.contacts.map((c, i) => {
-              const wa = whatsappHref(c.phone, greeting);
-              return (
-                <motion.li
-                  key={c.phone}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.15 + i * 0.06, type: "spring", stiffness: 380, damping: 30 }}
-                  className="flex items-center gap-3 rounded-[20px] border border-line/80 bg-surface-2/60 py-3 pl-4 pr-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[12.5px] font-medium text-muted">{c.label || "Shop line"}</p>
-                    <p className="tnum font-display text-[18px] font-semibold tracking-wide text-ink">{displayContactPhone(c.phone)}</p>
-                  </div>
-                  {wa ? (
-                    <motion.a
-                      whileTap={{ scale: 0.9 }}
-                      href={wa}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() => haptic(6)}
-                      aria-label={`WhatsApp ${shop.name} on ${displayContactPhone(c.phone)}`}
-                      className="grid size-11 place-items-center rounded-2xl bg-[#25d366]/15 text-[#128c4a] dark:text-[#4ade80]"
-                    >
-                      <MessageCircle className="size-5" />
-                    </motion.a>
-                  ) : null}
-                  <motion.a
-                    whileTap={{ scale: 0.9 }}
-                    href={telHref(c.phone)}
-                    onClick={() => haptic(6)}
-                    aria-label={`Call ${shop.name} on ${displayContactPhone(c.phone)}`}
-                    className="grid size-11 place-items-center rounded-2xl bg-primary text-primary-ink shadow-[var(--shadow-button)]"
-                  >
-                    <Phone className="size-5" />
-                  </motion.a>
-                </motion.li>
-              );
-            })}
-          </ul>
-        ) : (
-          <div className="flex items-center gap-3 rounded-[20px] bg-surface-2 px-4 py-4 text-[14px] text-ink-2">
-            <PhoneOff className="size-5 shrink-0 text-faint" />
-            <p>We don&apos;t have a number for {shop.name} yet. A runner can buy it for you instead.</p>
-          </div>
-        )}
-      </div>
+      <ShopContacts shop={shop} className="mt-4" />
 
       <div className="mt-6">
         <LinkButton href={`/collect?vendor=${shop.id}`} size="xl" block>
@@ -146,5 +81,56 @@ function Body({ shop, showMenuLink }: { shop: Shop; showMenuLink: boolean }) {
         </p>
       </div>
     </div>
+  );
+}
+
+/** The shop's numbers, each with Call and (for mobiles) WhatsApp. */
+export function ShopContacts({ shop, className }: { shop: Pick<Shop, "name" | "contacts">; className?: string }) {
+  const greeting = `Hello ${shop.name}, I found you on ${APP_NAME}. I'd like to order:`;
+  if (!shop.contacts.length) {
+    return (
+      <div className={cn("flex items-center gap-3 rounded-[18px] bg-surface-2 px-4 py-4 text-[14px] text-ink-2", className)}>
+        <PhoneOff className="size-5 shrink-0 text-faint" />
+        <p>We don&apos;t have a number for {shop.name} yet. A runner can buy it for you instead.</p>
+      </div>
+    );
+  }
+  return (
+    <ul className={cn("divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface", className)}>
+      {shop.contacts.map((c) => {
+        const wa = whatsappHref(c.phone, greeting);
+        const shown = displayContactPhone(c.phone);
+        return (
+          <li key={c.phone} className="flex items-center gap-3 py-3 pl-4 pr-3">
+            <div className="min-w-0 flex-1">
+              <p className="tnum text-[17px] font-semibold tracking-wide text-ink">{shown}</p>
+              <p className="truncate text-[12.5px] text-muted">{c.label || "Shop line"}</p>
+            </div>
+            {wa ? (
+              <motion.a
+                whileTap={{ scale: 0.9 }}
+                href={wa}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => haptic(6)}
+                aria-label={`WhatsApp ${shop.name} on ${shown}`}
+                className="grid size-11 place-items-center rounded-full bg-[#25d366]/14 text-[#128c4a] dark:text-[#4ade80]"
+              >
+                <MessageCircle className="size-5" />
+              </motion.a>
+            ) : null}
+            <motion.a
+              whileTap={{ scale: 0.9 }}
+              href={telHref(c.phone)}
+              onClick={() => haptic(6)}
+              aria-label={`Call ${shop.name} on ${shown}`}
+              className="grid size-11 place-items-center rounded-full bg-primary text-primary-ink"
+            >
+              <Phone className="size-5" />
+            </motion.a>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

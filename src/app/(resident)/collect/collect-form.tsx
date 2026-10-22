@@ -5,7 +5,7 @@ import { Bike, Check, ChevronLeft, Home, Phone, ShieldCheck, Wallet } from "luci
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ShopContactSheet } from "@/components/app/shop-contact-sheet";
-import { CategoryArt, tintFor } from "@/components/brand/category-art";
+import { Photo, shopPhoto } from "@/components/brand/photo";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
@@ -213,7 +213,7 @@ export function CollectForm(props: Props) {
             <div>
               <p className="text-[14.5px] text-ink-2">Delivery fee</p>
               {quote.loyaltyFree ? (
-                <p className="text-[12.5px] text-primary">Your {props.loyaltyEvery}th errand is on us 🎉</p>
+                <p className="text-[12.5px] text-primary">Your {props.loyaltyEvery}th errand is on us</p>
               ) : quote.loyaltyRemaining > 0 ? (
                 <p className="text-[12.5px] text-muted">{quote.loyaltyRemaining} more until a free one</p>
               ) : null}
@@ -284,38 +284,30 @@ export function CollectForm(props: Props) {
   );
 }
 
-/** Shop → your door, with a rider riding the route. */
+/** Shop → your door. */
 function RouteCard({ shop, address }: { shop: Shop; address: Address }) {
-  const t = tintFor(shop.category);
   return (
-    <div className="overflow-hidden rounded-[24px] shadow-[var(--shadow-card)] ring-1 ring-line/60" style={{ background: t.bg }}>
-      <div className="flex items-center gap-3 px-4 pb-2 pt-4">
-        <CategoryArt id={shop.category} size={48} />
-        <div className="relative h-10 flex-1">
-          <span aria-hidden className="absolute inset-x-0 top-1/2 h-0 -translate-y-1/2 border-t-[2.5px] border-dashed border-ink/20" />
-          <motion.span
-            aria-hidden
-            className="absolute top-1/2 grid size-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-primary text-primary-ink shadow-[var(--shadow-button)]"
-            initial={{ left: "8%" }}
-            animate={{ left: ["8%", "92%"] }}
-            transition={{ duration: 2.8, ease: [0.45, 0, 0.25, 1], repeat: Infinity, repeatType: "reverse", repeatDelay: 0.5 }}
-          >
-            <Bike className="size-[18px]" />
-          </motion.span>
+    <div className="relative overflow-hidden rounded-[20px] border border-line bg-surface">
+      <span aria-hidden className="absolute left-[39px] top-[64px] h-[calc(100%-128px)] border-l-2 border-dotted border-line-strong" />
+      <div className="flex items-center gap-3 p-3">
+        <span className="relative block size-14 shrink-0 overflow-hidden rounded-[14px] bg-sunken">
+          <Photo src={shopPhoto(shop)} sizes="112px" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[12px] font-medium text-muted">Collect from</p>
+          <p className="truncate text-[16px] font-semibold text-ink">{shop.name}</p>
+          {shop.location ? <p className="truncate text-[12.5px] text-muted">{shop.location}</p> : null}
         </div>
-        <span className="grid size-12 place-items-center rounded-2xl bg-hero text-hero-ink">
+      </div>
+      <div className="flex items-center gap-3 p-3 pt-1">
+        <span className="grid size-14 shrink-0 place-items-center rounded-[14px] bg-hero text-hero-ink">
           <Home className="size-6" />
         </span>
-      </div>
-      <div className="flex items-start justify-between gap-4 px-4 pb-4">
         <div className="min-w-0">
-          <p className="text-[11.5px] font-semibold uppercase tracking-wider text-ink-2/70">Collect from</p>
-          <p className="truncate font-display text-[16px] font-semibold text-ink">{shop.name}</p>
-          {shop.location ? <p className="truncate text-[12.5px] text-ink-2">{shop.location}</p> : null}
-        </div>
-        <div className="min-w-0 text-right">
-          <p className="text-[11.5px] font-semibold uppercase tracking-wider text-ink-2/70">To</p>
-          <p className="truncate font-display text-[16px] font-semibold text-ink">{address.block && address.house ? `Block ${address.block}, ${address.house}` : "Your door"}</p>
+          <p className="text-[12px] font-medium text-muted">Deliver to</p>
+          <p className="truncate text-[16px] font-semibold text-ink">
+            {address.block && address.house ? `Block ${address.block}, House ${address.house}` : "Your door"}
+          </p>
         </div>
       </div>
     </div>

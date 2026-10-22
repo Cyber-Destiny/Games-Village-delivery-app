@@ -1,12 +1,12 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { BadgeCheck, Flame, MapPin, Phone, Plus, Trash2, X } from "lucide-react";
+import { BadgeCheck, Camera, Flame, MapPin, Phone, Plus, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { BankFields, emptyBank, type BankValue } from "@/components/app/bank-form";
 import { AdminHeader } from "@/components/admin/ui";
-import { CategoryArt, tintFor } from "@/components/brand/category-art";
+import { categoryPhoto, Photo, shopPhoto } from "@/components/brand/photo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
@@ -20,6 +20,7 @@ import { CATEGORIES, getCategory } from "@/lib/categories";
 import { cn } from "@/lib/cn";
 import { naira } from "@/lib/money";
 import { displayContactPhone } from "@/lib/phone";
+import { uploadPhoto } from "@/lib/upload-client";
 import { deleteItem, saveItem, saveVendor } from "../actions";
 
 type Details = {
@@ -29,6 +30,7 @@ type Details = {
   description: string;
   location: string;
   contacts: ContactRow[];
+  image: string | null;
   hours: string;
   isPartner: boolean;
   isActive: boolean;
@@ -46,6 +48,7 @@ const blank = (): Details => ({
   description: "",
   location: "",
   contacts: [contactRow()],
+  image: null,
   hours: "",
   isPartner: true,
   isActive: true,
@@ -73,6 +76,7 @@ export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
             contacts: v.contacts.length
               ? v.contacts.map((c) => contactRow(c.label ?? "", displayContactPhone(c.phone).replace(/\s/g, "")))
               : [contactRow()],
+            image: v.image,
             hours: v.hours ?? "",
             isPartner: v.isPartner,
             isActive: v.isActive,
@@ -96,7 +100,6 @@ export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
 
       <motion.div initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.04 } } }} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {vendors.map((v) => {
-          const t = tintFor(v.category);
           return (
             <motion.button
               key={v.id}
@@ -106,16 +109,16 @@ export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
               onClick={() => open(v)}
               className={cn("card overflow-hidden text-left", !v.isActive && "opacity-55")}
             >
-              <div className="flex items-end justify-between px-5 pb-3 pt-4" style={{ background: t.bg }}>
-                <CategoryArt id={v.category} size={52} />
-                <div className="flex gap-1.5">
+              <div className="relative flex h-32 items-start justify-end bg-sunken p-3">
+                <Photo src={shopPhoto(v)} sizes="(min-width: 1280px) 400px, (min-width: 640px) 50vw, 100vw" />
+                <div className="relative flex gap-1.5">
                   {!v.isActive ? <Badge tone="danger">Hidden</Badge> : null}
                   {v.isPartner && v.accountNumber ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-surface/85 px-2 py-1 text-[11px] font-semibold text-primary-soft-ink">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-surface/90 px-2 py-1 text-[11px] font-semibold text-primary-soft-ink backdrop-blur">
                       <BadgeCheck className="size-3" /> Partner
                     </span>
                   ) : (
-                    <span className="rounded-full bg-surface/85 px-2 py-1 text-[11px] font-semibold text-accent-soft-ink">No bank yet</span>
+                    <span className="rounded-full bg-surface/90 px-2 py-1 text-[11px] font-semibold text-accent-soft-ink backdrop-blur">No bank yet</span>
                   )}
                 </div>
               </div>
@@ -173,6 +176,11 @@ export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
                   <Field label="Short description" optional>
                     <Input value={editing.description} onChange={set("description")} />
                   </Field>
+                  <CoverEditor
+                    category={editing.category}
+                    image={editing.image}
+                    onChange={(image) => setEditing({ ...editing, image })}
+                  />
                   <ContactsEditor rows={editing.contacts} onChange={(contacts) => setEditing({ ...editing, contacts })} />
                   <div className="rounded-2xl bg-surface-2 p-4 sm:col-span-2">
                     <p className="mb-1 text-[14px] font-semibold text-ink">Bank account for payments</p>
@@ -218,6 +226,58 @@ export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
         ) : null}
       </Sheet>
     </>
+  );
+}
+
+function CoverEditor({ category, image, onChange }: { category: string; image: string | null; onChange: (image: string | null) => void }) {
+  const [busy, setBusy] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+  return (
+    <div className="overflow-hidden rounded-2xl border border-line sm:col-span-2">
+      <div className="relative h-40 bg-sunken">
+        <Photo src={image ?? categoryPhoto(category)} sizes="(min-width: 640px) 640px, 100vw" />
+        {!image ? (
+          <span className="absolute left-3 top-3 rounded-full bg-black/55 px-2.5 py-1 text-[11.5px] font-medium text-white backdrop-blur">
+            Default photo for this category
+          </span>
+        ) : null}
+      </div>
+      <div className="flex items-center justify-between gap-3 px-4 py-3">
+        <div>
+          <p className="text-[14px] font-semibold text-ink">Shop photo</p>
+          <p className="text-[12.5px] text-muted">A clear photo of the shop front or what they sell.</p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          {image ? (
+            <Button variant="ghost" size="sm" onClick={() => onChange(null)}>
+              Remove
+            </Button>
+          ) : null}
+          <Button variant="secondary" size="sm" loading={busy} onClick={() => input.current?.click()}>
+            <Camera className="size-4" /> {image ? "Change" : "Upload"}
+          </Button>
+        </div>
+        <input
+          ref={input}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            setBusy(true);
+            try {
+              onChange((await uploadPhoto(file)).url);
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : "Upload failed");
+            } finally {
+              setBusy(false);
+            }
+          }}
+        />
+      </div>
+    </div>
   );
 }
 

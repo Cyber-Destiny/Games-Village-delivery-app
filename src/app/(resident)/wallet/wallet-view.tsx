@@ -43,9 +43,8 @@ export function WalletView({ data }: { data: WalletData }) {
       <motion.section
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        className="grain relative overflow-hidden rounded-[28px] bg-hero p-6 text-hero-ink shadow-[var(--shadow-raised)]"
+        className="relative overflow-hidden rounded-[28px] bg-hero p-6 text-hero-ink shadow-[var(--shadow-raised)]"
       >
-        <div aria-hidden className="absolute -right-20 -top-24 size-72 rounded-full opacity-50 blur-3xl" style={{ background: "radial-gradient(circle, var(--accent), transparent 65%)" }} />
         <div className="relative z-10">
           <p className="text-[13px] font-medium text-hero-muted">Available balance</p>
           <p className="tnum mt-1 font-display text-[44px] font-bold leading-none tracking-tight">

@@ -12,13 +12,14 @@ import {
   Pencil,
   Plus,
   ShieldCheck,
-  Sparkles,
   Store,
   Wallet,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
-import { CategoryArt, tintFor } from "@/components/brand/category-art";
+import { ShopContacts } from "@/components/app/shop-contact-sheet";
+import { CategoryThumb, categoryPhoto, Photo, shopPhoto } from "@/components/brand/photo";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -98,7 +99,6 @@ export function NewErrand(props: Props) {
 
   const cat = category ? getCategory(category) : null;
   const kind = cat?.kind ?? "buy";
-  const tint = tintFor(category ?? "other");
   const shop = shops.find((s) => s.id === vendorId) ?? null;
 
   const categoryShops = useMemo(() => {
@@ -283,7 +283,6 @@ export function NewErrand(props: Props) {
               <p className="mt-1 text-[15px] text-muted">Pick one to get started.</p>
               <div className="mt-6 space-y-2.5">
                 {CATEGORIES.map((c, i) => {
-                  const t = tintFor(c.id);
                   return (
                     <motion.button
                       key={c.id}
@@ -300,11 +299,9 @@ export function NewErrand(props: Props) {
                         setItems([]);
                         go(1);
                       }}
-                      className="flex w-full items-center gap-4 rounded-[22px] bg-surface p-3 pr-4 text-left shadow-[var(--shadow-card)] ring-1 ring-line/60"
+                      className="flex w-full items-center gap-4 rounded-[20px] border border-line bg-surface p-2.5 pr-4 text-left"
                     >
-                      <span className="grid size-16 shrink-0 place-items-center rounded-[18px]" style={{ background: t.bg }}>
-                        <CategoryArt id={c.id} size={46} />
-                      </span>
+                      <CategoryThumb id={c.id} size={64} radius={14} />
                       <span className="min-w-0 flex-1">
                         <span className="block font-display text-[17px] font-semibold text-ink">{c.label}</span>
                         <span className="block text-[13.5px] leading-snug text-muted">{c.blurb}</span>
@@ -320,11 +317,12 @@ export function NewErrand(props: Props) {
           {/* ── STEP 1: details ── */}
           {step === 1 && cat ? (
             <div className="space-y-7">
-              <div className="flex items-center gap-4 rounded-[24px] p-4" style={{ background: tint.bg }}>
-                <CategoryArt id={cat.id} size={56} />
-                <div>
-                  <p className="font-display text-[19px] font-semibold text-ink">{cat.label}</p>
-                  <p className="text-[13.5px] leading-snug text-ink-2">{cat.blurb}</p>
+              <div className="relative h-32 overflow-hidden rounded-[20px] bg-sunken">
+                <Photo src={categoryPhoto(cat.id)} sizes="(min-width: 480px) 440px, 100vw" preload />
+                <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
+                <div className="absolute inset-x-4 bottom-3 text-white">
+                  <p className="font-display text-[20px] font-bold leading-tight">{cat.label}</p>
+                  <p className="text-[13px] leading-snug text-white/85">{cat.blurb}</p>
                 </div>
               </div>
 
@@ -334,11 +332,14 @@ export function NewErrand(props: Props) {
                     <h3 className="mb-3 text-[15px] font-semibold text-ink">Where from?</h3>
                     <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
                       <Chip active={vendorMode === "any"} onClick={() => chooseShop(null, "any")}>
-                        <Sparkles className="size-4" /> Any shop
+                        Any shop
                       </Chip>
                       {categoryShops.map((s) => (
                         <Chip key={s.id} active={vendorMode === "shop" && vendorId === s.id} onClick={() => chooseShop(s.id, "shop")}>
-                          <Store className="size-4" /> {s.name}
+                          <span className="relative -ml-1.5 block size-6 shrink-0 overflow-hidden rounded-full bg-sunken">
+                            <Photo src={shopPhoto(s)} sizes="48px" />
+                          </span>
+                          {s.name}
                         </Chip>
                       ))}
                       <Chip active={vendorMode === "other"} onClick={() => chooseShop(null, "other")}>
@@ -356,11 +357,28 @@ export function NewErrand(props: Props) {
                         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pt-2.5 text-[13px] text-muted">
                           Your runner will pick the best place in the estate.
                         </motion.p>
-                      ) : shop?.location ? (
-                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-1.5 pt-2.5 text-[13px] text-muted">
-                          <MapPin className="size-3.5" /> {shop.location}
-                          {shop.hours ? <span className="text-faint">· {shop.hours}</span> : null}
-                        </motion.p>
+                      ) : shop ? (
+                        <motion.div key={shop.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="pt-3">
+                          <div className="overflow-hidden rounded-[18px] border border-line bg-surface">
+                            <div className="flex items-center gap-3 p-3">
+                              <span className="relative block size-12 shrink-0 overflow-hidden rounded-xl bg-sunken">
+                                <Photo src={shopPhoto(shop)} sizes="96px" />
+                              </span>
+                              <div className="min-w-0">
+                                <p className="truncate text-[15px] font-semibold text-ink">{shop.name}</p>
+                                <p className="truncate text-[12.5px] text-muted">{[shop.location, shop.hours].filter(Boolean).join(" · ")}</p>
+                              </div>
+                            </div>
+                            <p className="border-t border-line px-3 pt-3 text-[13px] text-ink-2">Rather order directly? Call or WhatsApp them:</p>
+                            <ShopContacts shop={shop} className="m-3 mt-2" />
+                            <Link
+                              href={`/collect?vendor=${shop.id}`}
+                              className="flex items-center justify-between gap-2 border-t border-line px-4 py-3 text-[13.5px] font-semibold text-primary"
+                            >
+                              Already paid {shop.name}? Send a rider <ArrowRight className="size-4" />
+                            </Link>
+                          </div>
+                        </motion.div>
                       ) : null}
                     </AnimatePresence>
                   </section>
@@ -429,7 +447,7 @@ export function NewErrand(props: Props) {
                               className="overflow-hidden"
                             >
                               <div className="flex items-center gap-3 rounded-2xl bg-surface px-4 py-2.5 ring-1 ring-line/70">
-                                <span className="size-2 shrink-0 rounded-full" style={{ background: tint.ink }} />
+                                <span className="size-2 shrink-0 rounded-full bg-primary" />
                                 <p className="min-w-0 flex-1 truncate text-[14.5px] font-medium text-ink">{i.name}</p>
                                 <QtyStepper
                                   value={i.qty}
@@ -637,8 +655,8 @@ export function NewErrand(props: Props) {
           {step === 3 && cat && quote ? (
             <div className="space-y-5">
               <section className="overflow-hidden rounded-[24px] bg-surface shadow-[var(--shadow-card)] ring-1 ring-line/60">
-                <div className="flex items-center gap-3 p-4" style={{ background: tint.bg }}>
-                  <CategoryArt id={cat.id} size={44} />
+                <div className="flex items-center gap-3 border-b border-line p-4">
+                  <CategoryThumb id={cat.id} size={44} />
                   <div className="min-w-0">
                     <p className="font-display text-[17px] font-semibold text-ink">{cat.label}</p>
                     <p className="truncate text-[13px] text-ink-2">
@@ -685,7 +703,7 @@ export function NewErrand(props: Props) {
                       naira(quote.serviceFee)
                     )
                   }
-                  hint={quote.loyaltyFree ? `Your ${props.loyaltyEvery}th errand is on us 🎉` : quote.loyaltyRemaining > 0 ? `${quote.loyaltyRemaining} more until a free one` : undefined}
+                  hint={quote.loyaltyFree ? `Your ${props.loyaltyEvery}th errand is on us` : quote.loyaltyRemaining > 0 ? `${quote.loyaltyRemaining} more until a free one` : undefined}
                 />
                 {props.walletBalance > 0 ? (
                   <div className="mt-2 flex items-center justify-between gap-3 rounded-2xl bg-surface-2 px-3.5 py-3">

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import useSWR from "swr";
 import { Panel } from "@/components/admin/ui";
-import { CategoryArt, tintFor } from "@/components/brand/category-art";
+import { CategoryThumb } from "@/components/brand/photo";
 import { ChatSheet } from "@/components/order/chat-sheet";
 import { ItemsList, Milestones, MoneyBreakdown, Photo, Timeline } from "@/components/order/parts";
 import { Avatar } from "@/components/ui/avatar";
@@ -33,7 +33,6 @@ export function AdminOrder({ initial, runners }: { initial: OrderView; runners: 
   const [chat, setChat] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
-  const tint = tintFor(o.category);
   const final = o.status === "delivered" || o.status === "cancelled";
   const vendorPaid = o.vendorPayout && ["success", "manual"].includes(o.vendorPayout.status) ? o.vendorPayout.amount : 0;
   const paidIn = (o.at.paid ? o.money.total : o.money.walletApplied) + o.money.topupTotal;
@@ -55,8 +54,8 @@ export function AdminOrder({ initial, runners }: { initial: OrderView; runners: 
 
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <span className="grid size-16 place-items-center rounded-[20px]" style={{ background: tint.bg }}>
-            <CategoryArt id={o.category} size={46} />
+          <span className="block">
+            <CategoryThumb id={o.category} size={64} radius={18} />
           </span>
           <div>
             <h1 className="font-display text-[30px] font-bold leading-tight text-ink">#{o.code}</h1>
@@ -257,7 +256,7 @@ export function AdminOrder({ initial, runners }: { initial: OrderView; runners: 
         </div>
       </Sheet>
 
-      <ChatSheet orderId={o.id} open={chat} onClose={() => setChat(false)} title="Errand chat (you're Support)" quickReplies={["Hi, this is Runam support 👋", "We're on it", "Sorted — thanks for your patience"]} />
+      <ChatSheet orderId={o.id} open={chat} onClose={() => setChat(false)} title="Errand chat (you're Support)" quickReplies={["Hi, this is Runam support", "We're on it", "Sorted — thanks for your patience"]} />
     </>
   );
 }
