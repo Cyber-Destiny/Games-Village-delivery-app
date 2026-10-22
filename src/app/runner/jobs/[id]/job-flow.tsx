@@ -41,7 +41,6 @@ import { cn } from "@/lib/cn";
 import { haptic } from "@/lib/haptics";
 import { naira } from "@/lib/money";
 import type { OrderView } from "@/lib/orders/queries";
-import { displayContactPhone, telHref } from "@/lib/phone";
 import { useCountdown } from "../../dashboard";
 import { accept, arrived, atShop, complete, confirmPurchase, decline, headOut } from "../../actions";
 
@@ -301,7 +300,6 @@ function Line({ icon, label, value }: { icon: React.ReactNode; label: string; va
 
 function WhereToGo({ o }: { o: OrderView }) {
   const where = o.kind === "pickup" ? o.pickupFrom : o.vendorName;
-  const shopLine = o.vendorContacts[0];
   const eyebrow =
     o.category === "gas" && o.status === "to_vendor"
       ? "First collect the cylinder, then"
@@ -327,11 +325,6 @@ function WhereToGo({ o }: { o: OrderView }) {
         </div>
       ) : null}
       <div className="mt-4 flex flex-wrap gap-2">
-        {shopLine ? (
-          <a href={telHref(shopLine.phone)} className="flex h-10 items-center gap-2 rounded-xl bg-sunken px-3.5 text-[13.5px] font-semibold text-ink">
-            <Phone className="size-4" /> Call shop · {displayContactPhone(shopLine.phone)}
-          </a>
-        ) : null}
         {o.collectAs ? (
           <span className="flex h-10 items-center gap-1.5 rounded-xl bg-primary-soft px-3.5 text-[13px] font-semibold text-primary-soft-ink">
             <BadgeCheck className="size-4" /> Already paid — don&apos;t pay anything

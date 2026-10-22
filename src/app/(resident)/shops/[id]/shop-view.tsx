@@ -5,7 +5,7 @@ import { ArrowRight, Bike, ChevronLeft, Clock3, MapPin, PencilLine, Plus } from 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { ShopContacts } from "@/components/app/shop-contact-sheet";
+import { ShopChatButton } from "@/components/app/shop-contact-sheet";
 import { Photo, shopPhoto } from "@/components/brand/photo";
 import { Button, LinkButton } from "@/components/ui/button";
 import { QtyStepper } from "@/components/ui/stepper";
@@ -64,10 +64,14 @@ export function ShopView({ shop }: { shop: Shop }) {
           ) : null}
         </div>
 
-        <h2 className="mt-7 text-[15px] font-semibold text-ink">Order directly</h2>
-        <p className="mt-0.5 text-[13px] text-muted">Call or WhatsApp {shop.name} and pay them. When it&apos;s packed, send a rider.</p>
-        <ShopContacts shop={shop} className="mt-3" />
-        <LinkButton href={`/collect?vendor=${shop.id}`} size="lg" block className="mt-3">
+        {shop.chat ? (
+          <>
+            <h2 className="mt-7 text-[15px] font-semibold text-ink">Order directly</h2>
+            <p className="mt-0.5 text-[13px] text-muted">Chat with {shop.name} to order and agree how to pay. When it&apos;s packed, send a rider.</p>
+            <ShopChatButton shop={shop} className="mt-3" />
+          </>
+        ) : null}
+        <LinkButton href={`/collect?vendor=${shop.id}`} size="lg" block variant={shop.chat ? "secondary" : "primary"} className={shop.chat ? "mt-2" : "mt-7"}>
           <Bike className="size-[18px]" /> Paid &amp; packed? Send a rider
         </LinkButton>
       </motion.section>

@@ -1,10 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { Bike, Check, ChevronLeft, Home, Phone, ShieldCheck, Wallet } from "lucide-react";
+import { Bike, Check, ChevronLeft, Home, MessageCircle, ShieldCheck, Wallet } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ShopContactSheet } from "@/components/app/shop-contact-sheet";
 import { Photo, shopPhoto } from "@/components/brand/photo";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -44,7 +44,6 @@ export function CollectForm(props: Props) {
   const [addr, setAddr] = useState(props.address);
   const [editAddr, setEditAddr] = useState(!props.address.block || !props.address.house);
   const [useWallet, setUseWallet] = useState(props.walletBalance > 0);
-  const [contactOpen, setContactOpen] = useState(false);
   const [pending, start] = useTransition();
 
   const quote = computeQuote(
@@ -154,14 +153,13 @@ export function CollectForm(props: Props) {
               </span>
             </span>
           </motion.button>
-          {shop.contacts.length ? (
-            <button
-              type="button"
-              onClick={() => setContactOpen(true)}
+          {shop.chat ? (
+            <Link
+              href={`/chat/${shop.id}`}
               className="mt-2 inline-flex items-center gap-1.5 rounded-xl px-2 py-1.5 text-[13.5px] font-semibold text-primary hover:bg-primary-soft"
             >
-              <Phone className="size-3.5" /> Haven&apos;t ordered yet? Call {shop.name}
-            </button>
+              <MessageCircle className="size-3.5" /> Haven&apos;t ordered yet? Chat with {shop.name}
+            </Link>
           ) : null}
         </motion.section>
 
@@ -279,7 +277,6 @@ export function CollectForm(props: Props) {
         </div>
       </div>
 
-      <ShopContactSheet shop={shop} open={contactOpen} onClose={() => setContactOpen(false)} showMenuLink={false} />
     </div>
   );
 }

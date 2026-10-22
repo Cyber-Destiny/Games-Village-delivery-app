@@ -9,6 +9,7 @@ import {
   Home,
   Info,
   MapPin,
+  MessageCircle,
   Pencil,
   Plus,
   ShieldCheck,
@@ -18,7 +19,6 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
-import { ShopContacts } from "@/components/app/shop-contact-sheet";
 import { CategoryThumb, categoryPhoto, Photo, shopPhoto } from "@/components/brand/photo";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
@@ -369,8 +369,17 @@ export function NewErrand(props: Props) {
                                 <p className="truncate text-[12.5px] text-muted">{[shop.location, shop.hours].filter(Boolean).join(" · ")}</p>
                               </div>
                             </div>
-                            <p className="border-t border-line px-3 pt-3 text-[13px] text-ink-2">Rather order directly? Call or WhatsApp them:</p>
-                            <ShopContacts shop={shop} className="m-3 mt-2" />
+                            {shop.chat ? (
+                              <Link
+                                href={`/chat/${shop.id}`}
+                                className="flex items-center justify-between gap-2 border-t border-line px-4 py-3 text-[13.5px] font-semibold text-ink"
+                              >
+                                <span className="flex items-center gap-2">
+                                  <MessageCircle className="size-4 text-primary" /> Rather order directly? Chat with {shop.name}
+                                </span>
+                                <ArrowRight className="size-4 text-faint" />
+                              </Link>
+                            ) : null}
                             <Link
                               href={`/collect?vendor=${shop.id}`}
                               className="flex items-center justify-between gap-2 border-t border-line px-4 py-3 text-[13.5px] font-semibold text-primary"

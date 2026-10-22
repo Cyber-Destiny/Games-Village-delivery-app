@@ -24,31 +24,3 @@ export function maskPhone(phone: string): string {
   const local = formatPhoneLocal(phone);
   return local.slice(0, 4) + " ••• " + local.slice(-4);
 }
-
-// ── shop contact numbers ─────────────────────────────────────
-// Shops may give a landline, so anything that isn't a Nigerian mobile is kept as digits.
-
-export function normalizeContactPhone(input: string): string | null {
-  const mobile = normalizePhone(input);
-  if (mobile) return mobile;
-  const d = input.replace(/\D/g, "");
-  return /^0\d{6,12}$/.test(d) ? d : null;
-}
-
-export function isMobile(phone: string): boolean {
-  return /^234[789][01]\d{8}$/.test(phone);
-}
-
-export function displayContactPhone(phone: string): string {
-  return isMobile(phone) ? formatPhoneLocal(phone) : phone;
-}
-
-export function telHref(phone: string): string {
-  return isMobile(phone) ? `tel:+${phone}` : `tel:${phone}`;
-}
-
-/** WhatsApp only works with mobile numbers. */
-export function whatsappHref(phone: string, text?: string): string | null {
-  if (!isMobile(phone)) return null;
-  return `https://wa.me/${phone}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
-}

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { assertRole } from "@/lib/auth/dal";
 import { isCategoryId } from "@/lib/categories";
-import { db } from "@/lib/db";
+import { db, type Tx } from "@/lib/db";
 import { orders, runnerProfiles, users, vendorItems, vendors, type VendorContact } from "@/lib/db/schema";
 import { attempt, UserError } from "@/lib/errors";
 import {
@@ -20,7 +20,7 @@ import {
   retryPayout,
 } from "@/lib/orders/service";
 import { resolveAccount } from "@/lib/paystack";
-import { normalizeContactPhone, normalizePhone } from "@/lib/phone";
+import { formatPhoneLocal, normalizePhone } from "@/lib/phone";
 import { saveSettings as persistSettings } from "@/lib/settings";
 import type { Settings } from "@/lib/settings-shared";
 
@@ -198,11 +198,12 @@ export async function saveVendor(input: z.infer<typeof vendorSchema>) {
     const parsed = vendorSchema.safeParse(input);
     if (!parsed.success) throw new UserError(parsed.error.issues[0]?.message ?? "Check the details.");
     const v = parsed.data;
+    // Shop staff: each number can sign in to the shop's chat inbox.
     const contacts: VendorContact[] = [];
     for (const c of v.contacts) {
       if (!c.phone) continue;
-      const phone = normalizeContactPhone(c.phone);
-      if (!phone) throw new UserError(`"${c.phone}" doesn't look like a phone number.`);
+      const phone = normalizePhone(c.phone);
+      if (!phone) throw new UserError(`"${c.phone}" isn't a Nigerian mobile number. Staff sign in with a code sent by SMS.`);
       if (!contacts.some((x) => x.phone === phone)) contacts.push({ label: c.label || null, phone });
     }
     let bank = {};
@@ -224,12 +225,43 @@ export async function saveVendor(input: z.infer<typeof vendorSchema>) {
       isActive: v.isActive,
       ...bank,
     };
-    let id = v.id;
-    if (id) await db.update(vendors).set(values).where(eq(vendors.id, id));
-    else [{ id }] = await db.insert(vendors).values(values).returning({ id: vendors.id });
+    const id = await db.transaction(async (tx) => {
+      let vendorId = v.id;
+      if (vendorId) await tx.update(vendors).set(values).where(eq(vendors.id, vendorId));
+      else [{ id: vendorId }] = await tx.insert(vendors).values(values).returning({ id: vendors.id });
+      await syncShopStaff(tx, vendorId!, v.name, contacts);
+      return vendorId!;
+    });
     done("/admin/vendors", "/home");
-    return { id: id! };
+    return { id };
   });
+}
+
+/** Makes each staff number a shop login, and signs out anyone who was removed. */
+async function syncShopStaff(tx: Tx, vendorId: string, shopName: string, staff: VendorContact[]) {
+  for (const c of staff) {
+    const [u] = await tx.select().from(users).where(eq(users.phone, c.phone));
+    if (!u) {
+      await tx.insert(users).values({ phone: c.phone, name: c.label || shopName, role: "vendor", vendorId });
+      continue;
+    }
+    if (u.role === "admin" || u.role === "runner") {
+      throw new UserError(`${formatPhoneLocal(c.phone)} belongs to a${u.role === "admin" ? "n admin" : " runner"} account.`);
+    }
+    if (u.vendorId && u.vendorId !== vendorId) throw new UserError(`${formatPhoneLocal(c.phone)} already works for another shop.`);
+    await tx
+      .update(users)
+      .set({ vendorId, isActive: true, name: u.role === "vendor" ? c.label || shopName : u.name })
+      .where(eq(users.id, u.id));
+  }
+  const keep = staff.map((c) => c.phone);
+  const current = await tx.select().from(users).where(eq(users.vendorId, vendorId));
+  for (const u of current.filter((u) => !keep.includes(u.phone))) {
+    await tx
+      .update(users)
+      .set({ vendorId: null, sessionVersion: sql`${users.sessionVersion} + 1`, ...(u.role === "vendor" ? { isActive: false } : {}) })
+      .where(eq(users.id, u.id));
+  }
 }
 
 const itemSchema = z.object({

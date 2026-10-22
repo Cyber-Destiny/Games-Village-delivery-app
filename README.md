@@ -18,9 +18,15 @@ It's a mobile-first web app (installable on the home screen) with three parts:
 
 ## Two ways to order
 
-**Order from the shop directly.** Tap a shop to see its phone numbers, call or WhatsApp to order, and pay the shop yourself. Once it's packed, tap **Send a rider**, enter the name the order is under, and pay the delivery fee in the app. The rider asks the shop for the order by that name and never handles any money. Cancelling before the rider reaches the shop refunds the fee to the wallet.
+**Chat with the shop.** Residents tap a shop and chat with it in the app: ask what's in stock, agree the price, and pay the shop directly (the shop can send its bank details in one tap). Once it's packed, they tap **Send rider**, enter the name the order is under, and pay the delivery fee in the app. The shop sees in the same chat when a rider is booked and when the rider arrives. Cancelling before the rider reaches the shop refunds the fee to the wallet.
+
+Phone numbers and WhatsApp links typed into chats are hidden, so orders stay on the platform.
 
 **Let a runner buy it.** The resident pays everything up front and the app pays the shop, as described below.
+
+### Shop staff
+
+In `/admin/vendors`, add each shop's staff under **Shop staff on chat** (name + mobile number). They sign in with that number like everyone else and land in the shop inbox at `/shop`: chats with customers, and riders on their way. Residents never see these numbers. Removing someone signs them out.
 
 ## How the money flows (runner buys it)
 
@@ -58,6 +64,7 @@ Demo accounts (all made up — sign in with these numbers):
 | Admin | `0800 000 0000` (whatever you put in `ADMIN_PHONES`) |
 | Resident | `0809 999 9999` (Amaka) |
 | Runner | `0801 111 1111` (Adaeze), `0802 222 2222`, `0803 333 3333` |
+| Shop staff | `0805 000 0002` (Chika, Village Mart) |
 
 Start an errand as Amaka in one browser and accept it as Adaeze in another (or a private window) to see the whole flow.
 
@@ -118,7 +125,7 @@ Put the keys in `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`. Runners 
 ## Day-to-day admin
 
 - **Add runners** in `/admin/runners` with their phone, NIN, guarantor and bank account. They sign in with that phone number.
-- **Add shops** in `/admin/vendors` (Shops) with their phone numbers, bank account and popular items. Residents see the numbers when they tap the shop. Partner shops are paid automatically.
+- **Add shops** in `/admin/vendors` (Shops) with a photo, the staff who reply to chats, their bank account and popular items. Partner shops are paid automatically.
 - **Approve payouts** in `/admin/payouts` (one-off shops and wallet withdrawals), and pay runners their earnings weekly with one tap.
 - **Watch the overview** for errands waiting too long, runners not accepting, failed transfers and unread chats.
 - **Residents → Gone quiet** lists regulars who stopped ordering. Give them a call.

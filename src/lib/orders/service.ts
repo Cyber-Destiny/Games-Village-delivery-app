@@ -15,6 +15,7 @@ import {
   type Order,
   type User,
 } from "../db/schema";
+import { APP_NAME } from "../brand";
 import { getCategory, isCategoryId } from "../categories";
 import { UserError } from "../errors";
 import { deliveryCode, orderCode, reference } from "../ids";
@@ -23,6 +24,7 @@ import { notify } from "../notify";
 import { initializeTransaction, PaystackError, paystackLive, resolveAccount, verifyTransaction, verifyTransfer } from "../paystack";
 import { applyTransferOutcome, reconcileProcessingPayouts, sendTransfer, settleMockPayouts } from "../payouts";
 import { getSettings, isOpenNow } from "../settings";
+import { postCollectNotice } from "../shop-chat";
 import { computeQuote } from "./quote";
 import { weekStart } from "../time";
 import { walletCredit, walletDebit } from "../wallet";
@@ -48,6 +50,13 @@ async function lockOrder(tx: Tx, orderId: string): Promise<Order> {
 
 function firstName(name: string | null | undefined) {
   return (name ?? "").trim().split(/\s+/)[0] || "Your runner";
+}
+
+/** Tells the shop (in its chat with the resident) that a rider is coming for a paid order. */
+async function noticeCollectBooked(order: Order, resident: Pick<User, "name"> | undefined) {
+  if (!order.collectAs) return;
+  const who = firstName(resident?.name) || "Your customer";
+  await postCollectNotice(order, `${who} booked a ${APP_NAME} rider to collect order #${order.code}. The rider will ask for "${order.collectAs}".`);
 }
 
 function payEmail(user: Pick<User, "email" | "phone">) {
@@ -219,6 +228,7 @@ export async function createOrder(user: User, raw: CreateOrderInput): Promise<{ 
 
   if (!result.ref) {
     await dispatch();
+    await noticeCollectBooked(result.order, user);
     return { orderId: result.order.id, payUrl: null };
   }
 
@@ -304,7 +314,16 @@ export async function markPaymentSuccess(ref: string, info: { amount: number; ch
   });
 
   if (outcome?.fresh) {
-    if (outcome.payment.purpose === "order") await dispatch();
+    if (outcome.payment.purpose === "order") {
+      await dispatch();
+      if (outcome.payment.orderId) {
+        const [o] = await db.select().from(orders).where(eq(orders.id, outcome.payment.orderId));
+        if (o && o.collectAs && o.status !== "cancelled") {
+          const [resident] = await db.select().from(users).where(eq(users.id, o.residentId));
+          await noticeCollectBooked(o, resident);
+        }
+      }
+    }
     if (outcome.payment.purpose === "topup" && outcome.payment.orderId) {
       const [o] = await db.select({ runnerId: orders.runnerId, code: orders.code }).from(orders).where(eq(orders.id, outcome.payment.orderId));
       if (o?.runnerId) {
@@ -532,6 +551,9 @@ async function cancelOrderInternal(orderId: string, reason: string, actorId: str
     await addEvent(tx, order.id, "cancelled", `Cancelled: ${reason}${refund > 0 ? ` · ${naira(refund)} refunded to wallet` : ""}`, actorId);
     return { order, refund };
   });
+  if (res && res.order.status !== "awaiting_payment") {
+    await postCollectNotice(res.order, `Order #${res.order.code} was cancelled. No rider is coming for it.`);
+  }
   if (res?.order.runnerId) {
     await notify(res.order.runnerId, {
       title: "Errand cancelled",
@@ -615,6 +637,7 @@ export async function arriveAtVendor(runner: User, orderId: string) {
     await addEvent(tx, o.id, "at_vendor", o.kind === "pickup" ? "Runner reached the pick-up point" : "Runner is at the shop", runner.id);
     return o;
   });
+  await postCollectNotice(order, `${firstName(runner.name)}, your ${APP_NAME} rider, is at the shop for order #${order.code}. Please hand over the order for "${order.collectAs}".`);
   return order;
 }
 
@@ -760,6 +783,7 @@ export async function startDelivery(runner: User, orderId: string) {
     await addEvent(tx, o.id, "on_the_way", "On the way to you", runner.id);
     return o;
   });
+  await postCollectNotice(order, `Order #${order.code} has been collected and is on its way.`, { alert: false });
   await notify(order.residentId, {
     title: "On the way",
     body: `${firstName(runner.name)} is bringing your errand.`,

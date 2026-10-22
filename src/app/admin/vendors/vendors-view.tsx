@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { BadgeCheck, Camera, Flame, MapPin, Phone, Plus, Trash2, X } from "lucide-react";
+import { BadgeCheck, Camera, Flame, MapPin, MessageCircle, Plus, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { BankFields, emptyBank, type BankValue } from "@/components/app/bank-form";
@@ -19,7 +19,7 @@ import type { AdminVendor } from "@/lib/admin";
 import { CATEGORIES, getCategory } from "@/lib/categories";
 import { cn } from "@/lib/cn";
 import { naira } from "@/lib/money";
-import { displayContactPhone } from "@/lib/phone";
+import { formatPhoneLocal } from "@/lib/phone";
 import { uploadPhoto } from "@/lib/upload-client";
 import { deleteItem, saveItem, saveVendor } from "../actions";
 
@@ -74,7 +74,7 @@ export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
             description: v.description ?? "",
             location: v.location ?? "",
             contacts: v.contacts.length
-              ? v.contacts.map((c) => contactRow(c.label ?? "", displayContactPhone(c.phone).replace(/\s/g, "")))
+              ? v.contacts.map((c) => contactRow(c.label ?? "", formatPhoneLocal(c.phone).replace(/\s/g, "")))
               : [contactRow()],
             image: v.image,
             hours: v.hours ?? "",
@@ -287,10 +287,12 @@ function ContactsEditor({ rows, onChange }: { rows: ContactRow[]; onChange: (row
     <div className="rounded-2xl border border-line p-4 sm:col-span-2">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <p className="text-[14px] font-semibold text-ink">Phone numbers</p>
-          <p className="text-[12.5px] text-muted">Residents see these when they tap the shop, and can call or WhatsApp to order.</p>
+          <p className="text-[14px] font-semibold text-ink">Shop staff on chat</p>
+          <p className="text-[12.5px] text-muted">
+            Each person signs in with their number to reply to customers. Residents never see these numbers.
+          </p>
         </div>
-        <Phone className="mt-0.5 size-4 shrink-0 text-faint" />
+        <MessageCircle className="mt-0.5 size-4 shrink-0 text-faint" />
       </div>
       <ul className="space-y-2">
         <AnimatePresence initial={false}>
@@ -304,7 +306,7 @@ function ContactsEditor({ rows, onChange }: { rows: ContactRow[]; onChange: (row
               className="grid grid-cols-[1fr_1fr_auto] gap-2"
             >
               <Input aria-label="Phone number" placeholder="0803 123 4567" inputMode="tel" value={r.phone} onChange={(e) => update(r.key, { phone: e.target.value })} />
-              <Input aria-label="Label" placeholder="Label, e.g. WhatsApp orders" value={r.label} onChange={(e) => update(r.key, { label: e.target.value })} />
+              <Input aria-label="Name" placeholder="Name, e.g. Chika" value={r.label} onChange={(e) => update(r.key, { label: e.target.value })} />
               <button
                 type="button"
                 title="Remove number"
@@ -323,7 +325,7 @@ function ContactsEditor({ rows, onChange }: { rows: ContactRow[]; onChange: (row
           onClick={() => onChange([...rows, contactRow()])}
           className="mt-3 inline-flex items-center gap-1.5 rounded-xl px-2 py-1.5 text-[13.5px] font-semibold text-primary hover:bg-primary-soft"
         >
-          <Plus className="size-4" /> Add another number
+          <Plus className="size-4" /> Add another person
         </button>
       ) : null}
     </div>

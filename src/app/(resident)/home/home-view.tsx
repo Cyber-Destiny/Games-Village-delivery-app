@@ -1,10 +1,11 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, ChevronDown, ChevronRight, Clock3, Megaphone, Phone, RotateCcw, Search } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronRight, Clock3, Megaphone, MessageCircle, RotateCcw, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ShopContactSheet } from "@/components/app/shop-contact-sheet";
+import { ChatList } from "@/components/chat/chat-list";
 import { CategoryThumb, categoryPhoto, Photo, shopPhoto } from "@/components/brand/photo";
 import { Avatar } from "@/components/ui/avatar";
 import { ESTATE_NAME } from "@/lib/brand";
@@ -13,6 +14,7 @@ import { cn } from "@/lib/cn";
 import type { OrderCardData } from "@/lib/orders/queries";
 import { milestoneIndex, statusCopy, STATUS_LABEL } from "@/lib/orders/status";
 import type { Shop } from "@/lib/resident";
+import type { ResidentThread } from "@/lib/shop-chat";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -142,9 +144,9 @@ function ShopCard({ s, onOpen }: { s: Shop; onOpen: () => void }) {
           <p className="truncate font-display text-[17px] font-semibold text-ink">{s.name}</p>
           <p className="truncate text-[13px] text-muted">{meta || getCategory(s.category).label}</p>
         </div>
-        {s.contacts.length ? (
+        {s.chat ? (
           <span className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-primary-soft px-3.5 text-[13.5px] font-semibold text-primary-soft-ink">
-            <Phone className="size-4" /> Call
+            <MessageCircle className="size-4" /> Chat
           </span>
         ) : null}
       </div>
@@ -169,6 +171,7 @@ export function HomeView({
     loyaltyEvery: number;
     loyaltyProgress: number;
     shops: Shop[];
+    chats: ResidentThread[];
     activeOrders: OrderCardData[];
     reorder: OrderCardData[];
   };
@@ -232,6 +235,13 @@ export function HomeView({
         </motion.section>
       ) : null}
 
+      {data.chats.length ? (
+        <motion.section variants={rise} className="mt-7">
+          <SectionTitle href="/chats">Chats</SectionTitle>
+          <ChatList threads={data.chats} className="mx-5" />
+        </motion.section>
+      ) : null}
+
       <motion.section variants={rise} className="mt-8">
         <SectionTitle>What do you need?</SectionTitle>
         <div className="grid grid-cols-3 gap-x-3 gap-y-4 px-5">
@@ -249,7 +259,7 @@ export function HomeView({
       {data.shops.length ? (
         <motion.section variants={rise} className="mt-9">
           <SectionTitle>Shops in {ESTATE_NAME}</SectionTitle>
-          <p className="-mt-2 mb-4 px-5 text-[13.5px] text-muted">Call or WhatsApp to order, then send a rider to collect it.</p>
+          <p className="-mt-2 mb-4 px-5 text-[13.5px] text-muted">Chat with a shop to order, then send a rider to collect it.</p>
           <div className="space-y-6 px-5">
             {data.shops.map((s) => (
               <ShopCard key={s.id} s={s} onOpen={() => openShop(s)} />

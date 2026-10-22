@@ -13,6 +13,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
 // All money is stored in kobo (₦1 = 100 kobo), matching Paystack.
@@ -24,7 +25,7 @@ const bytea = customType<{ data: Buffer; driverData: Buffer }>({
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 const ts = (name: string) => timestamp(name, { withTimezone: true });
 
-export const roleEnum = pgEnum("role", ["resident", "runner", "admin"]);
+export const roleEnum = pgEnum("role", ["resident", "runner", "admin", "vendor"]);
 
 export const orderStatusEnum = pgEnum("order_status", [
   "awaiting_payment",
@@ -78,6 +79,8 @@ export const users = pgTable(
     house: text("house"),
     street: text("street"),
     landmark: text("landmark"),
+    // Shop staff: the shop this person can chat for (role "vendor", or a resident who also works there).
+    vendorId: uuid("vendor_id").references((): AnyPgColumn => vendors.id, { onDelete: "set null" }),
     walletBalance: integer("wallet_balance").notNull().default(0),
     deliveredCount: integer("delivered_count").notNull().default(0),
     lastOrderAt: ts("last_order_at"),
@@ -393,6 +396,47 @@ export const settings = pgTable("settings", {
   updatedAt: ts("updated_at").notNull().defaultNow(),
 });
 
+// Resident ↔ shop conversations: one thread per resident per shop.
+export const shopThreads = pgTable(
+  "shop_threads",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    vendorId: uuid("vendor_id")
+      .notNull()
+      .references(() => vendors.id, { onDelete: "cascade" }),
+    residentId: uuid("resident_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    lastMessageAt: ts("last_message_at").notNull().defaultNow(),
+    lastPreview: text("last_preview"),
+    residentReadAt: ts("resident_read_at"),
+    vendorReadAt: ts("vendor_read_at"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("shop_threads_pair_idx").on(t.vendorId, t.residentId),
+    index("shop_threads_vendor_idx").on(t.vendorId, t.lastMessageAt),
+    index("shop_threads_resident_idx").on(t.residentId, t.lastMessageAt),
+  ],
+);
+
+export const shopMessages = pgTable(
+  "shop_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    threadId: uuid("thread_id")
+      .notNull()
+      .references(() => shopThreads.id, { onDelete: "cascade" }),
+    // null for notices the app posts itself (rider booked, rider arrived…)
+    senderId: uuid("sender_id").references(() => users.id, { onDelete: "set null" }),
+    side: text("side").notNull().$type<"resident" | "vendor" | "system">(),
+    body: text("body").notNull(),
+    orderId: uuid("order_id").references(() => orders.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("shop_messages_thread_idx").on(t.threadId, t.createdAt)],
+);
+
 export const pushSubscriptions = pgTable(
   "push_subscriptions",
   {
@@ -418,3 +462,5 @@ export type Payout = typeof payouts.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type Topup = typeof topups.$inferSelect;
 export type Role = (typeof roleEnum.enumValues)[number];
+export type ShopThread = typeof shopThreads.$inferSelect;
+export type ShopMessage = typeof shopMessages.$inferSelect;

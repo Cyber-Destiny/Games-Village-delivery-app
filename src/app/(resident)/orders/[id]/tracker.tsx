@@ -326,6 +326,14 @@ export function Tracker({ initial }: { initial: OrderView }) {
                 {order.kind === "pickup" ? `From ${order.pickupFrom ?? "—"}` : order.vendorName ?? "Any shop in the estate"}
               </p>
             </div>
+            {order.collectAs && order.vendorId ? (
+              <Link
+                href={`/chat/${order.vendorId}`}
+                className="ml-auto flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary-soft px-3.5 text-[13px] font-semibold text-primary-soft-ink"
+              >
+                <MessageCircle className="size-4" /> Chat
+              </Link>
+            ) : null}
           </div>
           <div className="p-4">
             <ItemsList order={order} />

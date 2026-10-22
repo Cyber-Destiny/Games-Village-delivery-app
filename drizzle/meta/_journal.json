@@ -29,6 +29,13 @@
       "when": 1792642089571,
       "tag": "0003_vendor_image",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792673484219,
+      "tag": "0004_shop_chat",
+      "breakpoints": true
     }
   ]
 }

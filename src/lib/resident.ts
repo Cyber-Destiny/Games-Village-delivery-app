@@ -1,21 +1,27 @@
 import "server-only";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { db } from "./db";
-import { orders, vendorItems, vendors, type User } from "./db/schema";
+import { orders, users, vendorItems, vendors, type User } from "./db/schema";
 import { ACTIVE_STATUSES } from "./orders/status";
 import { listResidentOrders } from "./orders/queries";
 import { paidOrderCount } from "./orders/service";
 import { getSettings, isOpenNow } from "./settings";
+import { residentThreads } from "./shop-chat";
 
 export async function getShops() {
-  const [shopRows, itemRows] = await Promise.all([
+  const [shopRows, itemRows, staffRows] = await Promise.all([
     db.select().from(vendors).where(eq(vendors.isActive, true)).orderBy(asc(vendors.sort), asc(vendors.name)),
     db
       .select()
       .from(vendorItems)
       .where(eq(vendorItems.isActive, true))
       .orderBy(desc(vendorItems.isPopular), asc(vendorItems.sort), asc(vendorItems.name)),
+    db
+      .selectDistinct({ vendorId: users.vendorId })
+      .from(users)
+      .where(and(isNotNull(users.vendorId), eq(users.isActive, true))),
   ]);
+  const onChat = new Set(staffRows.map((r) => r.vendorId));
   return shopRows.map((v) => ({
     id: v.id,
     name: v.name,
@@ -23,8 +29,9 @@ export async function getShops() {
     description: v.description,
     location: v.location,
     hours: v.hours,
-    contacts: v.contacts,
     image: v.image,
+    // Shops with staff signed up can be messaged in the app.
+    chat: onChat.has(v.id),
     isPartner: v.isPartner && !!v.accountNumber,
     items: itemRows
       .filter((i) => i.vendorId === v.id)
@@ -36,7 +43,7 @@ export type Shop = Awaited<ReturnType<typeof getShops>>[number];
 
 export async function getResidentHome(user: User) {
   const s = await getSettings();
-  const [shops, recent, paidCount, active] = await Promise.all([
+  const [shops, recent, paidCount, active, chats] = await Promise.all([
     getShops(),
     listResidentOrders(user.id, 12),
     paidOrderCount(user.id),
@@ -44,6 +51,7 @@ export async function getResidentHome(user: User) {
       .select({ id: orders.id })
       .from(orders)
       .where(and(eq(orders.residentId, user.id), inArray(orders.status, [...ACTIVE_STATUSES, "awaiting_payment"]))),
+    residentThreads(user.id, 3),
   ]);
   const activeIds = new Set(active.map((a) => a.id));
   return {
@@ -54,6 +62,7 @@ export async function getResidentHome(user: User) {
     loyaltyEvery: s.loyaltyEvery,
     loyaltyProgress: s.loyaltyEvery > 0 ? paidCount % s.loyaltyEvery : 0,
     shops,
+    chats,
     activeOrders: recent.filter((o) => activeIds.has(o.id)),
     reorder: recent.filter((o) => o.status === "delivered").slice(0, 3),
   };

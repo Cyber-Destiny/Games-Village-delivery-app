@@ -34,7 +34,7 @@ const SHOPS = [
   {
     name: "Mama Ngozi's Kitchen",
     image: "/images/shops/kitchen.webp",
-    contacts: [{ label: "Orders (demo number)", phone: "2348050000001" }],
+    contacts: [{ label: "Ngozi", phone: "2348050000001" }],
     category: "food",
     location: "Block D, by the basketball court",
     description: "Home-style Nigerian meals, cooked fresh daily",
@@ -50,7 +50,7 @@ const SHOPS = [
   {
     name: "Village Mart",
     image: "/images/shops/mart.webp",
-    contacts: [{ label: "Shop line (demo number)", phone: "2348050000002" }, { label: "WhatsApp orders (demo number)", phone: "2348050000012" }],
+    contacts: [{ label: "Chika", phone: "2348050000002" }, { label: "Emeka", phone: "2348050000012" }],
     category: "groceries",
     location: "Estate market, shop 4",
     description: "Provisions, drinks, toiletries",
@@ -68,7 +68,7 @@ const SHOPS = [
   {
     name: "Prime Gas Point",
     image: "/images/shops/gas.webp",
-    contacts: [{ label: "Demo number", phone: "2348050000003" }],
+    contacts: [{ label: "Sani", phone: "2348050000003" }],
     category: "gas",
     location: "Gate 2 road",
     description: "Cooking gas refills, all cylinder sizes",
@@ -82,7 +82,7 @@ const SHOPS = [
   {
     name: "FreshFold Dry Cleaners",
     image: "/images/shops/drycleaner.webp",
-    contacts: [{ label: "Demo number", phone: "2348050000004" }],
+    contacts: [{ label: "Funmi", phone: "2348050000004" }],
     category: "laundry",
     location: "Block A shopping row",
     description: "Wash, iron and dry-clean",
@@ -97,7 +97,7 @@ const SHOPS = [
   {
     name: "Suya Junction",
     image: "/images/shops/suya.webp",
-    contacts: [{ label: "Demo number", phone: "2348050000005" }],
+    contacts: [{ label: "Musa", phone: "2348050000005" }],
     category: "food",
     location: "Opposite the gym",
     description: "Evenings only — beef and chicken suya",
@@ -111,7 +111,7 @@ const SHOPS = [
   {
     name: "CarePlus Pharmacy",
     image: "/images/shops/pharmacy.webp",
-    contacts: [{ label: "Pharmacist (demo number)", phone: "2348050000006" }, { label: "WhatsApp orders (demo number)", phone: "2348050000016" }],
+    contacts: [{ label: "Pharm. Bola", phone: "2348050000006" }],
     category: "other",
     location: "Estate market, shop 11",
     description: "Over-the-counter medicine and essentials",
@@ -149,7 +149,7 @@ async function main() {
   const reset = process.argv.includes("--reset");
   if (reset) {
     console.log("Resetting all data…");
-    await db.execute(sql`truncate table messages, order_events, topups, payments, runner_earnings, wallet_entries, payouts, orders, vendor_items, vendors, runner_profiles, otp_codes, uploads, push_subscriptions, settings, users restart identity cascade`);
+    await db.execute(sql`truncate table shop_messages, shop_threads, messages, order_events, topups, payments, runner_earnings, wallet_entries, payouts, orders, vendor_items, vendors, runner_profiles, otp_codes, uploads, push_subscriptions, settings, users restart identity cascade`);
   } else {
     const existing = await db.select({ id: vendors.id }).from(vendors).limit(1);
     if (existing.length) {
@@ -191,6 +191,8 @@ async function main() {
       s.items.map(([name, price, popular], j) => ({ vendorId: v.id, name, price: k(price), isPopular: popular, sort: j })),
     );
     shopRows.push({ id: v.id, name: v.name, category: v.category, prices: s.items.map(([n, p]) => [n, k(p)] as [string, number]) });
+    // Shop staff sign in with these numbers to chat with customers.
+    await db.insert(users).values(s.contacts.map((c) => ({ phone: c.phone, name: c.label, role: "vendor" as const, vendorId: v.id })));
   }
 
   // Runners
@@ -297,6 +299,25 @@ async function main() {
       made++;
     }
   }
+  // A sample conversation between Amaka and Village Mart.
+  const mart = shopRows.find((r) => r.name === "Village Mart");
+  if (mart && residentIds[0]) {
+    const base = Date.now() - 50 * 60_000;
+    const at = (min: number) => new Date(base + min * 60_000);
+    const [t] = await db
+      .insert(schema.shopThreads)
+      .values({ vendorId: mart.id, residentId: residentIds[0], lastMessageAt: at(9), lastPreview: "Your order is packed. Send a rider when you're ready.", residentReadAt: at(9), vendorReadAt: at(9) })
+      .returning();
+    const chika = (await db.select().from(users).where(sql`${users.phone} = '2348050000002'`))[0];
+    await db.insert(schema.shopMessages).values([
+      { threadId: t.id, side: "resident", senderId: residentIds[0], body: "Hi, do you have a crate of eggs and 2 tins of milk?", createdAt: at(0) },
+      { threadId: t.id, side: "vendor", senderId: chika?.id ?? null, body: "Hi Amaka! Yes we do. That's ₦7,800 for everything.", createdAt: at(2) },
+      { threadId: t.id, side: "vendor", senderId: chika?.id ?? null, body: "Please pay to Guaranty Trust Bank, 0123456701 (DEMO VILLAGE MART).", createdAt: at(3) },
+      { threadId: t.id, side: "resident", senderId: residentIds[0], body: "Done, just sent it.", createdAt: at(6) },
+      { threadId: t.id, side: "vendor", senderId: chika?.id ?? null, body: "Your order is packed. Send a rider when you're ready.", createdAt: at(9) },
+    ]);
+  }
+
   for (const [runnerId, r] of ratingSums) {
     await db.update(runnerProfiles).set({ ratingSum: r.sum, ratingCount: r.n }).where(sql`${runnerProfiles.userId} = ${runnerId}`);
   }
@@ -304,6 +325,7 @@ async function main() {
   console.log(`✓ Seeded ${SHOPS.length} shops, ${RUNNERS.length} runners, ${RESIDENTS.length} residents, ${made} past errands.`);
   console.log(`  Admin phone: ${ADMIN_PHONE}`);
   console.log(`  Demo resident: 0809 999 9999 (Amaka Obi) · Demo runner: 0801 111 1111 (Adaeze)`);
+  console.log(`  Demo shop staff: 0805 000 0002 (Chika, Village Mart)`);
 }
 
 main()

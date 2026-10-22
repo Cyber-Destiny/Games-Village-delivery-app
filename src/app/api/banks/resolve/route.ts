@@ -4,7 +4,7 @@ import { resolveAccount } from "@/lib/paystack";
 
 // Account-name lookups cost money and reveal names, so keep them to genuine use.
 const WINDOW_MS = 10 * 60 * 1000;
-const LIMIT = { resident: 8, runner: 30, admin: 60 } as const;
+const LIMIT = { resident: 8, runner: 30, admin: 60, vendor: 8 } as const;
 const hits = new Map<string, number[]>();
 
 export const GET = withUser(async (req, user) => {

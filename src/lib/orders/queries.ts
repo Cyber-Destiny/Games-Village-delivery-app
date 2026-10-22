@@ -81,7 +81,6 @@ async function buildOrderView(order: Order, viewer: Viewer) {
     vendorId: order.vendorId,
     vendorName: order.vendorName,
     vendorLocation: order.vendorLocation,
-    vendorContacts: (isRunner || isAdmin) && vendor ? vendor.contacts : [],
     vendorIsPartner: !!vendor?.isPartner && !!vendor?.accountNumber,
     pickupFrom: order.pickupFrom,
     deliverTo: order.deliverTo,

@@ -17,6 +17,7 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
 export function homeFor(user: Pick<User, "role">): string {
   if (user.role === "admin") return "/admin";
   if (user.role === "runner") return "/runner";
+  if (user.role === "vendor") return "/shop";
   return "/home";
 }
 
@@ -35,6 +36,13 @@ export async function requireRole(...roles: Role[]): Promise<User> {
   const user = await requireUser();
   if (!roles.includes(user.role)) redirect(homeFor(user));
   return user;
+}
+
+/** Shop staff: vendor accounts, or residents who also work at a shop. */
+export async function requireShopStaff(): Promise<User & { vendorId: string }> {
+  const user = await requireUser();
+  if (!user.vendorId) redirect(homeFor(user));
+  return user as User & { vendorId: string };
 }
 
 /** For server actions / route handlers: throws instead of redirecting. */
