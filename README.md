@@ -24,6 +24,12 @@ Phone numbers and WhatsApp links typed into chats are hidden, so orders stay on 
 
 **Let a runner buy it.** The resident pays everything up front and the app pays the shop, as described below.
 
+### In-app calls
+
+Residents can call a shop from its chat, and residents and runners can call each other during an errand, using the call button. Calls go over the internet (WebRTC), so phone numbers are never shared, and they aren't recorded; the chat or errand timeline gets a line like "Voice call · 2:31" or "Missed call".
+
+Calls connect directly between phones. On some mobile networks that isn't possible without a relay, so for reliable calls add a TURN service (for example Cloudflare Realtime TURN or Metered) and set `TURN_URLS`, `TURN_USERNAME` and `TURN_CREDENTIAL`. Microphone access needs HTTPS, which the live site has.
+
 ### Shop staff
 
 In `/admin/vendors`, add each shop's staff under **Shop staff on chat** (name + mobile number). They sign in with that number like everyone else and land in the shop inbox at `/shop`: chats with customers, and riders on their way. Residents never see these numbers. Removing someone signs them out.
@@ -105,6 +111,9 @@ npx web-push generate-vapid-keys
 ```
 Put the keys in `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`. Runners and residents can then switch on notifications from their profile. On iPhone this needs the app added to the home screen first.
 
+### 6. Terms and privacy
+The Terms of Service (`/terms`) and Privacy Policy (`/privacy`) are written for a Nigerian business under the Nigeria Data Protection Act 2023. Set `NEXT_PUBLIC_LEGAL_NAME` to your registered business name and the support phone in `/admin/settings`, and have a lawyer look over both before launch. Depending on how many people's data you handle, you may also need to register with the Nigeria Data Protection Commission.
+
 ### Environment variables
 
 | Variable | Required | What it's for |
@@ -119,6 +128,8 @@ Put the keys in `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`. Runners 
 | `DEMO_SHOW_OTP` | | `true` shows login codes on screen (demo only). Always off once SMS is configured. |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | for push | Web push notifications |
 | `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_ESTATE_NAME` | | Rename the app / estate |
+| `NEXT_PUBLIC_LEGAL_NAME` | | Your registered business name, used in the Terms and Privacy Policy |
+| `TURN_URLS`, `TURN_USERNAME`, `TURN_CREDENTIAL` | for calls on mobile data | TURN relay for in-app calls |
 
 ---
 

@@ -345,3 +345,20 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Long-form legal text */
+.legal-body ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.4rem;
+}
+.legal-body strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.legal-body a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

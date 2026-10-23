@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { BankFields, emptyBank, type BankValue } from "@/components/app/bank-form";
 import { PushToggle } from "@/components/app/push";
+import { LegalLinks } from "@/components/legal/notes";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
@@ -62,6 +63,19 @@ export function ProfileView({
           <PushToggle description="Get alerted the second an errand comes in" />
         </div>
       </section>
+
+      <section className="mt-4 rounded-[22px] border border-line bg-surface p-4">
+        <p className="text-[15px] font-semibold text-ink">Keep every job in the app</p>
+        <ul className="mt-2 space-y-1.5 text-[13.5px] leading-relaxed text-ink-2">
+          <li>Never take cash or transfers from residents. Shops are paid by the app.</li>
+          <li>Don&apos;t accept private bookings, or give out your number for errands.</li>
+          <li>Hand items over only when the resident gives you their delivery code.</li>
+        </ul>
+        <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
+          Jobs arranged outside the app aren&apos;t covered, and taking them can get your account removed.
+        </p>
+      </section>
+      <LegalLinks className="mt-4" />
 
       <form action={signOut} className="mt-6">
         <Button type="submit" variant="ghost" block className="text-danger hover:text-danger">

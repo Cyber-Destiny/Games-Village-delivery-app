@@ -9,6 +9,7 @@ import useSWR from "swr";
 import { CategoryThumb } from "@/components/brand/photo";
 import { EstateMap, mapProgress } from "@/components/brand/estate-map";
 import { PageHeader } from "@/components/app/page-header";
+import { CallButton } from "@/components/call/call-provider";
 import { ChatSheet } from "@/components/order/chat-sheet";
 import { Confetti, DeliveryCode, ItemsList, Milestones, MoneyBreakdown, Photo, Timeline } from "@/components/order/parts";
 import { Avatar } from "@/components/ui/avatar";
@@ -255,7 +256,7 @@ export function Tracker({ initial }: { initial: OrderView }) {
               </div>
               <p className="mx-auto mt-4 flex max-w-[280px] items-start justify-center gap-1.5 text-[13px] leading-snug text-hero-muted">
                 <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" />
-                Only share it once you&apos;ve checked everything. It completes the errand.
+                Only share it once you&apos;ve checked everything. It completes the errand. Never pay the runner directly.
               </p>
             </div>
           </motion.section>
@@ -274,6 +275,13 @@ export function Tracker({ initial }: { initial: OrderView }) {
                 {order.runner.tag ? <span>· Bag {order.runner.tag}</span> : null}
               </div>
             </div>
+            {["assigned", "to_vendor", "at_vendor", "on_the_way", "arrived"].includes(order.status) ? (
+              <CallButton
+                target={{ orderId: order.id }}
+                peer={{ name: order.runner.firstName || "Your runner", subtitle: `Your runner · #${order.code}`, image: null, category: null }}
+                className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary-soft text-primary-soft-ink disabled:opacity-50"
+              />
+            ) : null}
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => setChatOpen(true)}

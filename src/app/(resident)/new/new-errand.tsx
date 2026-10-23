@@ -745,7 +745,10 @@ export function NewErrand(props: Props) {
 
               <div className="flex gap-3 px-1 text-[12.5px] leading-relaxed text-muted">
                 <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
-                <p>Only pay inside the app — never give cash or transfers to a runner. Every in-app errand is covered if something goes wrong.</p>
+                <p>
+                  Only pay inside the app — never give cash or transfers to a runner. Every in-app errand is covered if something goes wrong; anything arranged
+                  outside the app isn&apos;t.
+                </p>
               </div>
             </div>
           ) : null}

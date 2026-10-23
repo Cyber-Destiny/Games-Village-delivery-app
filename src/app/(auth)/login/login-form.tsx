@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, ArrowRight, Check, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -137,7 +138,15 @@ export function LoginForm() {
               Send code <ArrowRight className="size-5" />
             </Button>
             <p className="mt-5 text-center text-[12.5px] leading-relaxed text-faint">
-              By continuing you agree to pay for errands only through the app.
+              By continuing you agree to our{" "}
+              <Link href="/terms" className="underline underline-offset-2">
+                Terms
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="underline underline-offset-2">
+                Privacy Policy
+              </Link>
+              . Only arrange and pay for errands in the app. We aren&apos;t responsible for anything arranged outside it.
             </p>
           </motion.form>
         ) : step === "code" ? (

@@ -3,7 +3,9 @@
 import { Bike, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CallButton } from "@/components/call/call-provider";
 import { ChatView } from "@/components/chat/chat-view";
+import { OffPlatformNote } from "@/components/legal/notes";
 import { Photo, shopPhoto } from "@/components/brand/photo";
 import { LinkButton } from "@/components/ui/button";
 import { APP_NAME } from "@/lib/brand";
@@ -37,8 +39,11 @@ export function ShopChat({ vendorId, initial }: { vendorId: string; initial: Dat
               <span className="block truncate text-[12px] text-muted">{shop.hours ? `Open ${shop.hours}` : shop.location ?? "Shop"}</span>
             </span>
           </Link>
+          {initial.online ? (
+            <CallButton target={{ vendorId: shop.id }} peer={{ name: shop.name, subtitle: "Shop", image: shop.image, category: shop.category }} />
+          ) : null}
           <LinkButton href={`/collect?vendor=${shop.id}`} size="sm" variant="soft" className="shrink-0 rounded-full">
-            <Bike className="size-4" /> Send rider
+            <Bike className="size-4" /> Rider
           </LinkButton>
         </div>
       )}
@@ -53,6 +58,9 @@ export function ShopChat({ vendorId, initial }: { vendorId: string; initial: Dat
               Tell them what you want. They&apos;ll confirm the price and how to pay. When it&apos;s packed, send a rider to bring it to you.
             </p>
             <p className="mt-3 text-[12px] text-faint">Phone numbers are hidden so your order stays safe on {APP_NAME}.</p>
+            <OffPlatformNote className="mt-4 text-left">
+              Book riders only through {APP_NAME}. Deliveries or meet-ups arranged outside the app aren&apos;t covered, and we aren&apos;t responsible for what happens.
+            </OffPlatformNote>
           </div>
         ) : null
       }

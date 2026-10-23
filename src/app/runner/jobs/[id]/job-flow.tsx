@@ -24,6 +24,7 @@ import useSWR from "swr";
 import { BankFields, emptyBank, type BankValue } from "@/components/app/bank-form";
 import { PageHeader } from "@/components/app/page-header";
 import { CategoryThumb } from "@/components/brand/photo";
+import { CallButton } from "@/components/call/call-provider";
 import { ChatSheet } from "@/components/order/chat-sheet";
 import { Confetti, Photo, Timeline } from "@/components/order/parts";
 import { Avatar } from "@/components/ui/avatar";
@@ -93,10 +94,16 @@ export function JobFlow({ initial, commissionPct }: { initial: OrderView; commis
           subtitle={cat.label}
           right={
             o.status !== "delivered" && o.status !== "cancelled" && o.status !== "assigned" ? (
-              <motion.button whileTap={{ scale: 0.9 }} onClick={() => setChat(true)} className="relative flex h-10 items-center gap-1.5 rounded-full bg-primary-soft px-3.5 text-[13.5px] font-semibold text-primary-soft-ink">
-                <MessageCircle className="size-4" /> Chat
-                {o.unread ? <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-accent text-[11px] font-bold text-accent-ink ring-2 ring-bg">{o.unread}</span> : null}
-              </motion.button>
+              <div className="flex items-center gap-2">
+                <CallButton
+                  target={{ orderId: o.id }}
+                  peer={{ name: o.resident.firstName || "Customer", subtitle: `Block ${o.drop.block}, House ${o.drop.house}`, image: null, category: null }}
+                />
+                <motion.button whileTap={{ scale: 0.9 }} onClick={() => setChat(true)} className="relative flex h-10 items-center gap-1.5 rounded-full bg-primary-soft px-3.5 text-[13.5px] font-semibold text-primary-soft-ink">
+                  <MessageCircle className="size-4" /> Chat
+                  {o.unread ? <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-accent text-[11px] font-bold text-accent-ink ring-2 ring-bg">{o.unread}</span> : null}
+                </motion.button>
+              </div>
             ) : null
           }
         />

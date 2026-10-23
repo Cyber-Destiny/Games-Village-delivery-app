@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useState } from "react";
 import useSWR from "swr";
 import { PushToggle } from "@/components/app/push";
+import { LegalLinks, OffPlatformNote } from "@/components/legal/notes";
+import { APP_NAME } from "@/lib/brand";
 import { Photo, shopPhoto } from "@/components/brand/photo";
 import { Avatar } from "@/components/ui/avatar";
 import { Segmented } from "@/components/ui/segmented";
@@ -124,6 +126,10 @@ export function ShopInbox({
       <section className="mx-5 mt-8 overflow-hidden rounded-[20px] border border-line bg-surface">
         <PushToggle description="Get alerted for new messages and riders" />
       </section>
+      <OffPlatformNote className="mx-5 mt-4">
+        Hand orders only to riders booked in the app, for the name shown in your chat. Deliveries arranged outside {APP_NAME} aren&apos;t covered.
+      </OffPlatformNote>
+      <LegalLinks className="mt-4" />
       {alsoResident ? (
         <Link href="/home" className="mx-5 mt-3 block text-center text-[13.5px] font-semibold text-primary">
           Switch to your resident account

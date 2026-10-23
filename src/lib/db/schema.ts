@@ -437,6 +437,29 @@ export const shopMessages = pgTable(
   (t) => [index("shop_messages_thread_idx").on(t.threadId, t.createdAt)],
 );
 
+// In-app voice calls (WebRTC). Either between a resident and a shop (threadId) or a
+// resident and their runner during an errand (orderId). Phone numbers are never used.
+export const calls = pgTable(
+  "calls",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    threadId: uuid("thread_id").references(() => shopThreads.id, { onDelete: "cascade" }),
+    orderId: uuid("order_id").references(() => orders.id, { onDelete: "cascade" }),
+    callerId: uuid("caller_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    callerSide: text("caller_side").notNull().$type<"resident" | "vendor" | "runner">(),
+    status: text("status").notNull().default("ringing").$type<"ringing" | "active" | "ended" | "declined" | "missed" | "cancelled">(),
+    offer: text("offer").notNull(),
+    answer: text("answer"),
+    answeredBy: uuid("answered_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    answeredAt: ts("answered_at"),
+    endedAt: ts("ended_at"),
+  },
+  (t) => [index("calls_status_idx").on(t.status, t.createdAt), index("calls_thread_idx").on(t.threadId), index("calls_order_idx").on(t.orderId)],
+);
+
 export const pushSubscriptions = pgTable(
   "push_subscriptions",
   {
@@ -464,3 +487,4 @@ export type Topup = typeof topups.$inferSelect;
 export type Role = (typeof roleEnum.enumValues)[number];
 export type ShopThread = typeof shopThreads.$inferSelect;
 export type ShopMessage = typeof shopMessages.$inferSelect;
+export type Call = typeof calls.$inferSelect;

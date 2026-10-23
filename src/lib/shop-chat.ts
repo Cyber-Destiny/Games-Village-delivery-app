@@ -12,7 +12,7 @@ const MAX_LEN = 800;
 
 const firstName = (n: string | null | undefined) => (n ?? "").trim().split(/\s+/)[0] || "";
 
-function shortName(n: string | null | undefined) {
+export function shortName(n: string | null | undefined) {
   const parts = (n ?? "").trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return "Customer";
   return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0]}.` : parts[0];
@@ -34,7 +34,7 @@ function clean(body: string) {
   return text;
 }
 
-async function staffIds(vendorId: string) {
+export async function staffIds(vendorId: string) {
   const rows = await db
     .select({ id: users.id })
     .from(users)
@@ -49,7 +49,7 @@ async function activeShop(vendorId: string) {
 }
 
 /** Finds or creates the thread between a resident and a shop. */
-async function ensureThread(vendorId: string, residentId: string) {
+export async function ensureThread(vendorId: string, residentId: string) {
   const [t] = await db
     .insert(shopThreads)
     .values({ vendorId, residentId })
@@ -58,7 +58,7 @@ async function ensureThread(vendorId: string, residentId: string) {
   return t;
 }
 
-async function addMessage(threadId: string, side: "resident" | "vendor" | "system", body: string, senderId: string | null, orderId?: string) {
+export async function addMessage(threadId: string, side: "resident" | "vendor" | "system", body: string, senderId: string | null, orderId?: string) {
   const now = new Date();
   const [m] = await db.insert(shopMessages).values({ threadId, side, body, senderId, orderId: orderId ?? null, createdAt: now }).returning();
   await db

@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "motion/react";
-import { ChevronRight, CircleHelp, LogOut, MapPin, Phone, ShieldCheck, UserRound } from "lucide-react";
+import { ChevronRight, CircleHelp, FileText, Lock, LogOut, MapPin, Phone, ShieldCheck, UserRound } from "lucide-react";
+import { OffPlatformNote } from "@/components/legal/notes";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -58,7 +59,10 @@ export function AccountView({ profile, supportPhone, delivered, isAdmin }: { pro
         {supportPhone ? <Row icon={<Phone className="size-5" />} label="Call support" sub={formatPhoneLocal(supportPhone)} href={`tel:+${supportPhone}`} /> : null}
         <Row icon={<CircleHelp className="size-5" />} label="How it works" sub="Fees, refunds, delivery codes" href="/#how" />
         <Row icon={<ShieldCheck className="size-5" />} label={`The ${APP_NAME} promise`} sub="Pay in the app, you're covered" href="/#how" />
+        <Row icon={<FileText className="size-5" />} label="Terms of Service" sub="Including dealings outside the app" href="/terms" />
+        <Row icon={<Lock className="size-5" />} label="Privacy Policy" sub="What we collect and why" href="/privacy" />
       </section>
+      <OffPlatformNote className="mt-4 px-1" />
 
       <form action={signOut} className="mt-6">
         <Button type="submit" variant="ghost" block className="text-danger hover:text-danger">

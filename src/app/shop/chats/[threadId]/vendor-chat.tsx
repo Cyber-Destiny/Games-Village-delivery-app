@@ -2,6 +2,7 @@
 
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import { CallButton } from "@/components/call/call-provider";
 import { ChatView } from "@/components/chat/chat-view";
 import { Avatar } from "@/components/ui/avatar";
 import type { vendorChat } from "@/lib/shop-chat";
@@ -29,10 +30,11 @@ export function VendorChat({ threadId, initial, bankLine }: { threadId: string; 
             <ChevronLeft className="size-6" strokeWidth={2.2} />
           </Link>
           <Avatar name={initial.customer} size={40} />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-[15.5px] font-semibold text-ink">{initial.customer}</p>
             <p className="truncate text-[12px] text-muted">Customer in the estate</p>
           </div>
+          <CallButton target={{ threadId }} peer={{ name: initial.customer, subtitle: "Customer", image: null, category: null }} />
         </div>
       )}
     />

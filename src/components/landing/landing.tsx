@@ -68,6 +68,10 @@ const FAQ = (p: Props) => [
     a: "Yes. Set a budget, the runner shows us the receipt and we pay the shop directly. Any change goes to your wallet when the errand is delivered.",
   },
   {
+    q: "Can I pay or book a runner directly?",
+    a: `Please don't. Errands are only covered when they're booked and paid for in ${APP_NAME}. Anything you arrange with a runner or shop outside the app, like paying cash or booking them privately, is at your own risk, and we aren't responsible for what happens.`,
+  },
+  {
     q: "What if something is wrong or missing?",
     a: "Don't give your code until you're happy. If something still goes wrong, message us from the errand and we'll sort it out.",
   },
@@ -284,8 +288,16 @@ export function Landing(props: Props) {
         </Reveal>
         <footer className="mt-10 flex flex-col items-center justify-between gap-3 pb-6 text-[13px] text-muted sm:flex-row">
           <Logo size={26} className="scale-90" />
-          <p>
-            © {new Date().getFullYear()} {APP_NAME} · {ESTATE_NAME}, Abuja
+          <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <Link href="/terms" className="hover:text-ink">
+              Terms
+            </Link>
+            <Link href="/privacy" className="hover:text-ink">
+              Privacy
+            </Link>
+            <span>
+              © {new Date().getFullYear()} {APP_NAME} · {ESTATE_NAME}, Abuja
+            </span>
           </p>
         </footer>
       </section>

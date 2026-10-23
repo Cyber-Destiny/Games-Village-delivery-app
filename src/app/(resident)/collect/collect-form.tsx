@@ -260,7 +260,7 @@ export function CollectForm(props: Props) {
           <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
           <p>
             Your items are paid to {shop.name} directly. {APP_NAME} only charges for delivery, paid here in the app — never give the rider cash. Cancel before the
-            rider reaches the shop and the fee goes back to your wallet.
+            rider reaches the shop and the fee goes back to your wallet. Anything arranged outside the app isn&apos;t covered.
           </p>
         </motion.div>
       </motion.div>
