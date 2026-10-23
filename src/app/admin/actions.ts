@@ -121,8 +121,8 @@ export async function saveRunner(input: z.infer<typeof runnerSchema>) {
 
     let bank: { bankCode: string; bankName: string; accountNumber: string; accountName: string } | null = null;
     if (v.bank?.accountNumber) {
-      const { accountName } = await resolveAccount(v.bank.accountNumber, v.bank.bankCode).catch(() => {
-        throw new UserError("We couldn't verify the bank account.");
+      const { accountName } = await resolveAccount(v.bank.accountNumber, v.bank.bankCode).catch((err) => {
+        throw err instanceof UserError ? err : new UserError("We couldn't verify the bank account.");
       });
       bank = { ...v.bank, accountName };
     }
@@ -206,8 +206,8 @@ export async function saveVendor(input: z.infer<typeof vendorSchema>) {
     }
     let bank = {};
     if (v.bank?.accountNumber) {
-      const { accountName } = await resolveAccount(v.bank.accountNumber, v.bank.bankCode).catch(() => {
-        throw new UserError("We couldn't verify the shop's bank account.");
+      const { accountName } = await resolveAccount(v.bank.accountNumber, v.bank.bankCode).catch((err) => {
+        throw err instanceof UserError ? err : new UserError("We couldn't verify the shop's bank account.");
       });
       bank = { ...v.bank, accountName, recipientCode: null };
     }

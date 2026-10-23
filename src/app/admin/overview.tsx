@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, Bike, ChevronRight, CircleAlert, MessageCircle, Timer, Wallet } from "lucide-react";
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, Bike, ChevronRight, CircleAlert, Headset, MessageCircle, Timer, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import useSWR from "swr";
@@ -56,7 +56,8 @@ export function OverviewView({ initial }: { initial: Overview }) {
     o.alerts.stuck ? { icon: AlertTriangle, text: `${o.alerts.stuck} errand${o.alerts.stuck > 1 ? "s" : ""} need attention`, href: "/admin/orders?filter=attention", tone: "danger" } : null,
     o.alerts.pendingPayouts ? { icon: Wallet, text: `${o.alerts.pendingPayouts} payout${o.alerts.pendingPayouts > 1 ? "s" : ""} waiting for approval`, href: "/admin/payouts", tone: "accent" } : null,
     o.alerts.failedPayouts ? { icon: CircleAlert, text: `${o.alerts.failedPayouts} failed transfer${o.alerts.failedPayouts > 1 ? "s" : ""}`, href: "/admin/payouts", tone: "danger" } : null,
-    o.alerts.unreadChats ? { icon: MessageCircle, text: `${o.alerts.unreadChats} unanswered support message${o.alerts.unreadChats > 1 ? "s" : ""}`, href: "/admin/orders?filter=all", tone: "accent" } : null,
+    o.alerts.supportChats ? { icon: Headset, text: `${o.alerts.supportChats} support chat${o.alerts.supportChats > 1 ? "s" : ""} waiting for a reply`, href: "/admin/support", tone: "accent" } : null,
+    o.alerts.unreadChats ? { icon: MessageCircle, text: `${o.alerts.unreadChats} unanswered errand message${o.alerts.unreadChats > 1 ? "s" : ""}`, href: "/admin/orders?filter=all", tone: "accent" } : null,
     o.runners.online === 0 ? { icon: Bike, text: "No runners online right now", href: "/admin/runners", tone: "accent" } : null,
   ].filter(Boolean) as Array<{ icon: typeof Wallet; text: string; href: string; tone: "danger" | "accent" }>;
 

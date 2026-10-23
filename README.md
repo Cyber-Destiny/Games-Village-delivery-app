@@ -4,13 +4,16 @@ Live at **https://runam.app**
 
 Runam is a web app for errands inside the estate: residents ask for food, groceries, gas refills, parcel pick-ups or laundry, a vetted runner does it, and **the shop is paid directly by the platform** so runners never handle residents' money.
 
-It's a mobile-first web app (installable on the home screen) with three parts:
+It's a mobile-first web app (installable on the home screen). Everyone signs in at `/login` with their phone number, and the app opens the right part for them:
 
 | Who | Where | What they do |
 |---|---|---|
 | **Residents** | `/home` | Start an errand, pay with Paystack or wallet, track it live, approve extra money, give the delivery code, get change back in their wallet, rate the runner |
 | **Runners** | `/runner` | Go online, get errands (with sound + vibration), accept, confirm the purchase with a receipt photo, the shop is paid automatically, deliver, enter the resident's code |
-| **You (admin)** | `/admin` | Live dashboard, errands, runners, shops & their items, payout approvals, runner payouts, residents (incl. "gone quiet" watch), fees and settings |
+| **Shop staff** | `/shop` | Chat with customers, see riders on their way |
+| **You (admin)** | `/admin` | Live dashboard, errands, runners, shops & their items, payout approvals, runner payouts, residents (incl. "gone quiet" watch), support chats, fees and settings |
+
+**Who gets in where.** Only the numbers in `ADMIN_PHONES` can open `/admin`. A number becomes a runner when you add it in Admin → Runners, and shop staff when you add it to a shop. Everyone else is a resident. If someone opens a page that isn't theirs (a runner trying `/admin`, say), they're sent back to their own home. Admins can also use the resident app, and there's an "Open admin console" button on their Account page.
 
 > "Runam" is a working name. Change it in one place: set `NEXT_PUBLIC_APP_NAME` (and `NEXT_PUBLIC_ESTATE_NAME`) in your environment.
 
@@ -29,6 +32,10 @@ Phone numbers and WhatsApp links typed into chats are hidden, so orders stay on 
 Residents can call a shop from its chat, and residents and runners can call each other during an errand, using the call button. Calls go over the internet (WebRTC), so phone numbers are never shared, and they aren't recorded; the chat or errand timeline gets a line like "Voice call · 2:31" or "Missed call".
 
 Calls connect directly between phones. On some mobile networks that isn't possible without a relay, so for reliable calls add a TURN service (for example Cloudflare Realtime TURN or Metered) and set `TURN_URLS`, `TURN_USERNAME` and `TURN_CREDENTIAL`. Microphone access needs HTTPS, which the live site has.
+
+### Support
+
+Residents, runners and shop staff can tap **Chat with support** (Account, Profile or the shop inbox, and "Get help" on any errand). Messages arrive in **Admin → Support** with a badge and a push notification to every admin; replies go straight back to them. Next to the chat there are **Call** and **WhatsApp** buttons for the support phone set in Admin → Settings (also shown on the landing page, the login screen, and in the Terms and Privacy Policy).
 
 ### Shop staff
 
@@ -50,20 +57,22 @@ This is what keeps everyone in the app: residents are covered only for in-app pa
 
 ## Try it locally (demo mode)
 
+Everything in this section is for a test copy on your own computer. The live site has no demo data and no demo mode.
+
 Requirements: Node 20.9+ and a Postgres database (local, or a free one from [Neon](https://neon.tech)).
 
 ```bash
 npm install
-cp .env.example .env        # then set DATABASE_URL, and DEMO_SHOW_OTP=true
+cp .env.example .env        # then set DATABASE_URL, and DEMO_MODE=true
 npm run setup               # creates tables + demo data
 npm run dev                 # http://localhost:3000
 ```
 
-With no Paystack key the app runs in **demo mode**: payments go through a fake checkout and shop transfers "settle" after a few seconds. With `DEMO_SHOW_OTP=true` the login code is shown on screen (otherwise it's printed in the terminal).
+With `DEMO_MODE=true` and no Paystack key, payments go through a pretend checkout and shop transfers "settle" after a few seconds, and the login code is shown on screen (without it, codes are only printed in the terminal).
 
-> ⚠️ `DEMO_SHOW_OTP=true` lets anyone sign in as anyone — only use it for a private demo. It switches itself off as soon as SMS (Termii) is configured.
+> ⚠️ `DEMO_MODE=true` lets anyone sign in as anyone. Never set it on the live site. Without it and without a Paystack key, the app refuses payments with "Online payments aren't switched on yet".
 
-Demo accounts (all made up — sign in with these numbers):
+Demo accounts (all made up, local only; the seed script refuses to run against anything but a local database):
 
 | Role | Phone |
 |---|---|
@@ -87,7 +96,7 @@ Create a Postgres database (Neon free tier is plenty to start). Use the **pooled
 1. Import this GitHub repo into Vercel.
 2. Add the environment variables from `.env.example` (see the table below).
 3. Deploy. The `vercel-build` script runs database migrations automatically before each build.
-4. Don't run the demo seed on your live database. Instead, sign in with your admin number and add your real shops and runners in `/admin`.
+4. Sign in at `/login` with your admin number and add your real shops and runners in `/admin`. Don't set `DEMO_MODE` and don't run the demo seed on the live database.
 
 ### 3. Paystack
 1. Create a Paystack business account and complete **business activation** (Paystack needs this before you can accept live payments and use Transfers — usually means CAC registration).
@@ -103,7 +112,7 @@ Create a Postgres database (Neon free tier is plenty to start). Use the **pooled
 Paystack charges a fee on every payment; build that into your service fees in `/admin/settings`.
 
 ### 4. SMS login codes (Termii)
-Set `SMS_PROVIDER=termii`, `TERMII_API_KEY`, and `TERMII_SENDER_ID` (register a sender ID with Termii; use `TERMII_CHANNEL=dnd` so codes reach DND numbers). Once this is set, login codes are only ever sent by SMS.
+Set `SMS_PROVIDER=termii`, `TERMII_API_KEY`, and `TERMII_SENDER_ID` (register a sender ID with Termii; use `TERMII_CHANNEL=dnd` so codes reach DND numbers). **Nobody can sign in on the live site until this is done**: without it, login codes are only written to the server logs (Vercel → your project → Logs, search for `sms:console`).
 
 ### 5. Push notifications (recommended for runners)
 ```bash
@@ -125,7 +134,7 @@ The Terms of Service (`/terms`) and Privacy Policy (`/privacy`) are written for 
 | `PAYSTACK_SECRET_KEY` | for payments | Empty = demo mode |
 | `PAYSTACK_EMAIL_DOMAIN` | | Used to build an email for residents who haven't added one |
 | `SMS_PROVIDER`, `TERMII_*` | for SMS | Login codes and key alerts |
-| `DEMO_SHOW_OTP` | | `true` shows login codes on screen (demo only). Always off once SMS is configured. |
+| `DEMO_MODE` | | Local demo only: on-screen login codes and a pretend checkout. Never set on the live site. |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | for push | Web push notifications |
 | `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_ESTATE_NAME` | | Rename the app / estate |
 | `NEXT_PUBLIC_LEGAL_NAME` | | Your registered business name, used in the Terms and Privacy Policy |

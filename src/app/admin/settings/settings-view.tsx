@@ -17,7 +17,7 @@ import { naira } from "@/lib/money";
 import type { Settings } from "@/lib/settings-shared";
 import { saveSettings } from "../actions";
 
-type Status = { paystack: "demo" | "test" | "live"; sms: boolean; push: boolean; webhook: string; callback: string };
+type Status = { paystack: "off" | "demo" | "test" | "live"; sms: boolean; push: boolean; webhook: string; callback: string };
 
 export function SettingsView({ initial, status }: { initial: Settings; status: Status }) {
   const router = useRouter();
@@ -122,18 +122,22 @@ export function SettingsView({ initial, status }: { initial: Settings; status: S
           <Integration
             icon={<CreditCard className="size-5" />}
             name="Paystack"
-            state={status.paystack === "live" ? "Live" : status.paystack === "test" ? "Test mode" : "Demo mode"}
+            state={status.paystack === "live" ? "Live" : status.paystack === "test" ? "Test mode" : status.paystack === "demo" ? "Demo mode" : "Not connected"}
             ok={status.paystack === "live"}
-            detail={status.paystack === "demo" ? "Add PAYSTACK_SECRET_KEY to take real payments." : "Paste these into Paystack → Settings → API Keys & Webhooks."}
+            detail={
+              status.paystack === "off" || status.paystack === "demo"
+                ? "Residents can't pay until PAYSTACK_SECRET_KEY is added. Runner and shop bank accounts also need it."
+                : "Paste these into Paystack → Settings → API Keys & Webhooks."
+            }
           >
-            {status.paystack !== "demo" ? (
+            {status.paystack === "live" || status.paystack === "test" ? (
               <div className="mt-3 space-y-2">
                 <CopyLine label="Webhook URL" value={status.webhook} />
                 <CopyLine label="Callback URL" value={status.callback} />
               </div>
             ) : null}
           </Integration>
-          <Integration icon={<MessageSquareText className="size-5" />} name="SMS (Termii)" state={status.sms ? "Connected" : "Not set up"} ok={status.sms} detail={status.sms ? "Login codes and key alerts are sent by SMS." : "Add TERMII_API_KEY and set SMS_PROVIDER=termii so login codes are texted."} />
+          <Integration icon={<MessageSquareText className="size-5" />} name="SMS (Termii)" state={status.sms ? "Connected" : "Not set up"} ok={status.sms} detail={status.sms ? "Login codes and key alerts are sent by SMS." : "Nobody can receive a login code until TERMII_API_KEY is added and SMS_PROVIDER=termii is set."} />
           <Integration icon={<BellRing className="size-5" />} name="Push notifications" state={status.push ? "Connected" : "Not set up"} ok={status.push} detail={status.push ? "Runners and residents can turn on alerts in their profile." : "Generate VAPID keys (npx web-push generate-vapid-keys) and add them to the environment."} />
         </Panel>
       </div>

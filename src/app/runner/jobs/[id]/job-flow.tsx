@@ -11,6 +11,7 @@ import {
   KeyRound,
   Landmark,
   MapPin,
+  LifeBuoy,
   MessageCircle,
   Navigation,
   Phone,
@@ -18,6 +19,7 @@ import {
   Store,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import useSWR from "swr";
@@ -222,6 +224,12 @@ export function JobFlow({ initial, commissionPct }: { initial: OrderView; commis
             ) : null}
           </div>
         </div>
+      ) : null}
+
+      {o.status !== "delivered" && o.status !== "cancelled" ? (
+        <Link href={`/support?about=${o.code}`} className="mx-5 mt-8 flex items-center justify-center gap-2 text-[13.5px] font-semibold text-muted hover:text-ink">
+          <LifeBuoy className="size-4" /> Problem with this job? Chat with support
+        </Link>
       ) : null}
 
       <DeclineSheet

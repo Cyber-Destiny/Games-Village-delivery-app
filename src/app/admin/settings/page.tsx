@@ -1,4 +1,5 @@
 import { requireRole } from "@/lib/auth/dal";
+import { demoMode } from "@/lib/demo";
 import { appUrl, paystackLive, paystackTestKey } from "@/lib/paystack";
 import { getSettings } from "@/lib/settings";
 import { smsConfigured } from "@/lib/sms";
@@ -13,7 +14,7 @@ export default async function SettingsPage() {
     <SettingsView
       initial={s}
       status={{
-        paystack: !paystackLive() ? "demo" : paystackTestKey() ? "test" : "live",
+        paystack: !paystackLive() ? (demoMode() ? "demo" : "off") : paystackTestKey() ? "test" : "live",
         sms: smsConfigured(),
         push: !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && !!process.env.VAPID_PRIVATE_KEY,
         webhook: `${appUrl()}/api/paystack/webhook`,

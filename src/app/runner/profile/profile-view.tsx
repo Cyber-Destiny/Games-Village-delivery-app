@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { BankFields, emptyBank, type BankValue } from "@/components/app/bank-form";
 import { PushToggle } from "@/components/app/push";
 import { LegalLinks } from "@/components/legal/notes";
+import { SupportCard } from "@/components/support/support-card";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
@@ -21,6 +22,8 @@ export function ProfileView({
   bank,
   rating,
   ratingCount,
+  supportPhone,
+  supportUnread,
 }: {
   name: string;
   phone: string;
@@ -28,6 +31,8 @@ export function ProfileView({
   bank: { bankName: string; accountNumber: string; accountName: string } | null;
   rating: number | null;
   ratingCount: number;
+  supportPhone: string;
+  supportUnread: number;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -63,6 +68,8 @@ export function ProfileView({
           <PushToggle description="Get alerted the second an errand comes in" />
         </div>
       </section>
+
+      <SupportCard phone={supportPhone} unread={supportUnread} title="Need help on a job?" className="mt-4" />
 
       <section className="mt-4 rounded-[22px] border border-line bg-surface p-4">
         <p className="text-[15px] font-semibold text-ink">Keep every job in the app</p>

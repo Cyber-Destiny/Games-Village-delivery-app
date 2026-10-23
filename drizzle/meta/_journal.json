@@ -43,6 +43,13 @@
       "when": 1792750196634,
       "tag": "0005_calls",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792753942201,
+      "tag": "0006_support_chat",
+      "breakpoints": true
     }
   ]
 }

@@ -10,7 +10,8 @@ import { APP_NAME } from "@/lib/brand";
 import { db } from "@/lib/db";
 import { runnerProfiles, users } from "@/lib/db/schema";
 import { attempt, UserError } from "@/lib/errors";
-import { normalizePhone } from "@/lib/phone";
+import { formatPhoneLocal, normalizePhone } from "@/lib/phone";
+import { getSettings } from "@/lib/settings";
 
 function adminPhones(): string[] {
   return (process.env.ADMIN_PHONES ?? "")
@@ -58,7 +59,10 @@ export async function verifyCode(phone: string, code: string) {
         .where(eq(users.id, user.id))
         .returning();
     }
-    if (!user.isActive) throw new UserError("This account has been disabled. Contact the estate admin.");
+    if (!user.isActive) {
+      const { supportPhone } = await getSettings();
+      throw new UserError(`This account has been disabled. ${supportPhone ? `Call or WhatsApp ${formatPhoneLocal(supportPhone)} for help.` : "Contact support for help."}`);
+    }
     if (user.role === "runner") {
       await db.insert(runnerProfiles).values({ userId: user.id }).onConflictDoNothing();
     }

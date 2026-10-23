@@ -27,7 +27,7 @@ const TYPE = {
 
 const tone = (s: string) => (["success", "manual"].includes(s) ? "success" : ["failed", "reversed", "rejected"].includes(s) ? "danger" : "accent") as "success" | "danger" | "accent";
 
-export function PayoutsView({ data, mode }: { data: Data; mode: "demo" | "test" | "live" }) {
+export function PayoutsView({ data, mode }: { data: Data; mode: "off" | "demo" | "test" | "live" }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [rejecting, setRejecting] = useState<AdminPayout | null>(null);
@@ -51,9 +51,11 @@ export function PayoutsView({ data, mode }: { data: Data; mode: "demo" | "test" 
         <div className="mb-6 flex items-start gap-3 rounded-2xl bg-accent-soft px-4 py-3 text-[13.5px] text-accent-soft-ink">
           <FlaskConical className="mt-0.5 size-4 shrink-0" />
           <p>
-            {mode === "demo"
-              ? "Demo mode — no Paystack key is set, so transfers are simulated and settle after a few seconds."
-              : "Paystack test key — transfers go through Paystack's test environment. No real money moves."}
+            {mode === "off"
+              ? "Paystack isn't connected yet, so no payments come in and no transfers can be sent."
+              : mode === "demo"
+                ? "Demo mode — no Paystack key is set, so transfers are simulated and settle after a few seconds."
+                : "Paystack test key — transfers go through Paystack's test environment. No real money moves."}
           </p>
         </div>
       ) : null}

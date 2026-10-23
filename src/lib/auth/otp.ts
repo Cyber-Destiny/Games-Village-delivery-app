@@ -2,6 +2,7 @@ import "server-only";
 import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { db } from "../db";
+import { demoMode } from "../demo";
 import { otpCodes } from "../db/schema";
 import { sendSms, smsConfigured } from "../sms";
 
@@ -15,13 +16,11 @@ function hash(phone: string, code: string) {
 }
 
 /**
- * Demo mode only: return the login code to the browser so the app can be tried
- * without SMS. Anyone could then sign in as anyone, so this is off unless
- * DEMO_SHOW_OTP=true is set explicitly, and it is always off once real SMS
- * delivery is configured.
+ * Local demo only: return the login code to the browser so the app can be tried
+ * without SMS. Off unless DEMO_MODE=true, and always off once SMS is configured.
  */
 export function showOtpOnScreen(): boolean {
-  return process.env.DEMO_SHOW_OTP === "true" && !smsConfigured();
+  return demoMode() && !smsConfigured();
 }
 
 export type RequestOtpResult =

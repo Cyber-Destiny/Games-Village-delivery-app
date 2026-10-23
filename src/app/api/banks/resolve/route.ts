@@ -21,7 +21,7 @@ export const GET = withUser(async (req, user) => {
   try {
     const { accountName } = await resolveAccount(account, bank);
     return json({ accountName });
-  } catch {
-    throw new UserError("We couldn't find that account. Check the number and bank.");
+  } catch (err) {
+    throw err instanceof UserError ? err : new UserError("We couldn't find that account. Check the number and bank.");
   }
 });

@@ -21,7 +21,7 @@ import { UserError } from "../errors";
 import { deliveryCode, orderCode, reference } from "../ids";
 import { naira } from "../money";
 import { notify } from "../notify";
-import { initializeTransaction, PaystackError, paystackLive, resolveAccount, verifyTransaction, verifyTransfer } from "../paystack";
+import { initializeTransaction, PAYMENTS_OFF, paymentsReady, PaystackError, paystackLive, resolveAccount, verifyTransaction, verifyTransfer } from "../paystack";
 import { applyTransferOutcome, reconcileProcessingPayouts, sendTransfer, settleMockPayouts } from "../payouts";
 import { getSettings, isOpenNow } from "../settings";
 import { postCollectNotice } from "../shop-chat";
@@ -152,6 +152,7 @@ export async function createOrder(user: User, raw: CreateOrderInput): Promise<{ 
     useWallet: input.useWallet,
     paidCount,
   });
+  if (quote.toPay > 0 && !paymentsReady()) throw new UserError(PAYMENTS_OFF);
 
   const result = await db.transaction(async (tx) => {
     let created: Order | undefined;
@@ -243,7 +244,7 @@ export async function createOrder(user: User, raw: CreateOrderInput): Promise<{ 
   } catch (err) {
     await cancelOrderInternal(result.order.id, "Payment could not start", null, { allowed: ["awaiting_payment"] });
     console.error("[paystack] initialize failed", err);
-    throw new UserError("We couldn't start the payment. Please try again in a moment.");
+    throw err instanceof UserError ? err : new UserError("We couldn't start the payment. Please try again in a moment.");
   }
 }
 
@@ -662,8 +663,8 @@ export async function submitPurchase(runner: User, orderId: string, raw: z.infer
   if (input.account) {
     try {
       accountName = (await resolveAccount(input.account.accountNumber, input.account.bankCode)).accountName;
-    } catch {
-      throw new UserError("We couldn't verify that account number. Check it with the shop.");
+    } catch (err) {
+      throw err instanceof UserError ? err : new UserError("We couldn't verify that account number. Check it with the shop.");
     }
   }
 
@@ -987,7 +988,7 @@ export async function respondToTopup(user: User, topupId: string, approve: boole
     console.error("[paystack] topup initialize failed", err);
     await db.update(topups).set({ status: "pending" }).where(and(eq(topups.id, t.id), eq(topups.status, "approved")));
     await db.update(payments).set({ status: "abandoned" }).where(eq(payments.reference, ref));
-    throw new UserError("We couldn't start the payment. Please try again.");
+    throw err instanceof UserError ? err : new UserError("We couldn't start the payment. Please try again.");
   }
 }
 
@@ -1247,8 +1248,8 @@ export async function requestWithdrawal(user: User, raw: z.infer<typeof withdraw
   let accountName: string;
   try {
     accountName = (await resolveAccount(input.accountNumber, input.bankCode)).accountName;
-  } catch {
-    throw new UserError("We couldn't verify that account. Check the number and bank.");
+  } catch (err) {
+    throw err instanceof UserError ? err : new UserError("We couldn't verify that account. Check the number and bank.");
   }
   await db.transaction(async (tx) => {
     const [p] = await tx

@@ -34,6 +34,6 @@ export const DEFAULT_SETTINGS: Settings = {
   openTime: "07:00",
   closeTime: "21:00",
   autoPayPartnerVendors: true,
-  supportPhone: "",
+  supportPhone: "2347077802207",
   announcement: "",
 };

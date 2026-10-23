@@ -1,12 +1,13 @@
 "use client";
 
 import { motion } from "motion/react";
-import { ChevronRight, CircleHelp, FileText, Lock, LogOut, MapPin, Phone, ShieldCheck, UserRound } from "lucide-react";
+import { ChevronRight, CircleHelp, FileText, Lock, LogOut, MapPin, ShieldCheck, UserRound } from "lucide-react";
 import { OffPlatformNote } from "@/components/legal/notes";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { PushToggle } from "@/components/app/push";
+import { SupportCard } from "@/components/support/support-card";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -19,7 +20,19 @@ import { saveProfile } from "../actions";
 
 type Profile = { name: string; email: string; phone: string; block: string; house: string; street: string; landmark: string };
 
-export function AccountView({ profile, supportPhone, delivered, isAdmin }: { profile: Profile; supportPhone: string; delivered: number; isAdmin: boolean }) {
+export function AccountView({
+  profile,
+  supportPhone,
+  supportUnread,
+  delivered,
+  isAdmin,
+}: {
+  profile: Profile;
+  supportPhone: string;
+  supportUnread: number;
+  delivered: number;
+  isAdmin: boolean;
+}) {
   const router = useRouter();
   const [edit, setEdit] = useState(false);
   const [v, setV] = useState(profile);
@@ -55,8 +68,9 @@ export function AccountView({ profile, supportPhone, delivered, isAdmin }: { pro
         <PushToggle description="Know when your runner is on the way" />
       </section>
 
+      {isAdmin ? null : <SupportCard phone={supportPhone} unread={supportUnread} className="mt-4" />}
+
       <section className="mt-4 divide-y divide-line overflow-hidden rounded-[22px] border border-line/70 bg-surface shadow-[var(--shadow-card)]">
-        {supportPhone ? <Row icon={<Phone className="size-5" />} label="Call support" sub={formatPhoneLocal(supportPhone)} href={`tel:+${supportPhone}`} /> : null}
         <Row icon={<CircleHelp className="size-5" />} label="How it works" sub="Fees, refunds, delivery codes" href="/#how" />
         <Row icon={<ShieldCheck className="size-5" />} label={`The ${APP_NAME} promise`} sub="Pay in the app, you're covered" href="/#how" />
         <Row icon={<FileText className="size-5" />} label="Terms of Service" sub="Including dealings outside the app" href="/terms" />

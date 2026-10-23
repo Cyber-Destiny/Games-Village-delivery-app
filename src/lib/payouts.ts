@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, eq, inArray, isNull, lt, lte } from "drizzle-orm";
 import { db, type DbOrTx } from "./db";
+import { demoMode } from "./demo";
 import { orderEvents, orders, payouts, runnerEarnings, runnerProfiles, users, vendors, type Payout } from "./db/schema";
 import { reference } from "./ids";
 import { naira } from "./money";
@@ -69,7 +70,7 @@ export async function sendTransfer(payoutId: string): Promise<void> {
     .update(payouts)
     .set({
       transferCode: result.transferCode ?? "none",
-      mockSettleAt: paystackLive() ? null : new Date(Date.now() + MOCK_SETTLE_MS),
+      mockSettleAt: paystackLive() || !demoMode() ? null : new Date(Date.now() + MOCK_SETTLE_MS),
     })
     .where(eq(payouts.id, payoutId));
 
@@ -142,7 +143,7 @@ export async function applyTransferOutcome(ref: string, outcome: "success" | "fa
 
 /** Demo mode: settle transfers a few seconds after they were "sent". */
 export async function settleMockPayouts() {
-  if (paystackLive()) return;
+  if (paystackLive() || !demoMode()) return;
   const due = await db
     .select({ reference: payouts.reference })
     .from(payouts)

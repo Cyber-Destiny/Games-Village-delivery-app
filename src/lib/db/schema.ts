@@ -460,6 +460,38 @@ export const calls = pgTable(
   (t) => [index("calls_status_idx").on(t.status, t.createdAt), index("calls_thread_idx").on(t.threadId), index("calls_order_idx").on(t.orderId)],
 );
 
+// Anyone signed in (resident, runner or shop staff) ↔ the support team. One thread per person.
+export const supportThreads = pgTable(
+  "support_threads",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    lastMessageAt: ts("last_message_at").notNull().defaultNow(),
+    lastPreview: text("last_preview"),
+    userReadAt: ts("user_read_at"),
+    supportReadAt: ts("support_read_at"),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("support_threads_user_idx").on(t.userId), index("support_threads_recent_idx").on(t.lastMessageAt)],
+);
+
+export const supportMessages = pgTable(
+  "support_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    threadId: uuid("thread_id")
+      .notNull()
+      .references(() => supportThreads.id, { onDelete: "cascade" }),
+    senderId: uuid("sender_id").references(() => users.id, { onDelete: "set null" }),
+    side: text("side").notNull().$type<"user" | "support" | "system">(),
+    body: text("body").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("support_messages_thread_idx").on(t.threadId, t.createdAt)],
+);
+
 export const pushSubscriptions = pgTable(
   "push_subscriptions",
   {
@@ -488,3 +520,4 @@ export type Role = (typeof roleEnum.enumValues)[number];
 export type ShopThread = typeof shopThreads.$inferSelect;
 export type ShopMessage = typeof shopMessages.$inferSelect;
 export type Call = typeof calls.$inferSelect;
+export type SupportThread = typeof supportThreads.$inferSelect;

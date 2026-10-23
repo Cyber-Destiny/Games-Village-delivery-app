@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Bike, LayoutDashboard, LogOut, ReceiptText, Settings, Store, Users, Wallet } from "lucide-react";
+import { Bike, Headset, LayoutDashboard, LogOut, ReceiptText, Settings, Store, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import useSWR from "swr";
@@ -17,10 +17,11 @@ const NAV = [
   { href: "/admin/vendors", label: "Shops", icon: Store, badge: null },
   { href: "/admin/payouts", label: "Payouts", icon: Wallet, badge: "payouts" },
   { href: "/admin/residents", label: "Residents", icon: Users, badge: null },
+  { href: "/admin/support", label: "Support", icon: Headset, badge: "support" },
   { href: "/admin/settings", label: "Settings", icon: Settings, badge: null },
 ] as const;
 
-type Badges = { payouts: number; orders: number };
+type Badges = { payouts: number; orders: number; support: number };
 
 function useBadges(initial: Badges) {
   const { data } = useSWR<{ badges: Badges }>("/api/admin/overview", { refreshInterval: 15000, fallbackData: { badges: initial } as { badges: Badges } });

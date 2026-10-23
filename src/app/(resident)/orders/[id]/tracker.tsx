@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/field";
 import { Sheet } from "@/components/ui/sheet";
 import { StarInput, StarRating } from "@/components/ui/stars";
 import { toast } from "@/components/ui/toast";
+import { APP_NAME } from "@/lib/brand";
 import { getCategory } from "@/lib/categories";
 import { cn } from "@/lib/cn";
 import { haptic } from "@/lib/haptics";
@@ -396,10 +397,10 @@ export function Tracker({ initial }: { initial: OrderView }) {
           <MenuRow
             icon={<LifeBuoy className="size-5" />}
             label="Get help with this errand"
-            sub="Message support — we reply fast"
+            sub={`Chat privately with the ${APP_NAME} team`}
             onClick={() => {
               setMenuOpen(false);
-              setChatOpen(true);
+              router.push(`/support?about=${order.code}`);
             }}
           />
           {canCancel ? (

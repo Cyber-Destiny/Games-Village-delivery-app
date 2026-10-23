@@ -1,10 +1,10 @@
 /**
- * Demo data so the app looks alive on first run.
+ * Demo data for trying the app locally.
  *   npm run db:seed            → adds demo data if the database is empty
  *   npm run db:seed -- --reset → wipes everything first (DANGER: deletes all data)
  *
- * All shops, people and phone numbers below are made up. Replace them with your
- * real vendors from the admin console before launch.
+ * All shops, people and phone numbers below are made up. It only runs against a
+ * database on this machine; never load it into the live database.
  */
 import { drizzle } from "drizzle-orm/postgres-js";
 import { sql } from "drizzle-orm";
@@ -147,10 +147,16 @@ const RESIDENTS = [
 ] as const;
 
 async function main() {
+  const host = new URL(process.env.DATABASE_URL!).hostname;
+  if (!["localhost", "127.0.0.1", "::1"].includes(host) && !process.argv.includes("--allow-remote")) {
+    console.error(`Refusing to load demo data into ${host}. It's for local databases only (add --allow-remote to override).`);
+    process.exitCode = 1;
+    return;
+  }
   const reset = process.argv.includes("--reset");
   if (reset) {
     console.log("Resetting all data…");
-    await db.execute(sql`truncate table shop_messages, shop_threads, messages, order_events, topups, payments, runner_earnings, wallet_entries, payouts, orders, vendor_items, vendors, runner_profiles, otp_codes, uploads, push_subscriptions, settings, users restart identity cascade`);
+    await db.execute(sql`truncate table support_messages, support_threads, calls, shop_messages, shop_threads, messages, order_events, topups, payments, runner_earnings, wallet_entries, payouts, orders, vendor_items, vendors, runner_profiles, otp_codes, uploads, push_subscriptions, settings, users restart identity cascade`);
   } else {
     const existing = await db.select({ id: vendors.id }).from(vendors).limit(1);
     if (existing.length) {

@@ -12,10 +12,10 @@ export default async function PrivacyPage() {
   const s = await getSettings();
   const contact = s.supportPhone ? (
     <>
-      using Help in the app or on <strong>{formatPhoneLocal(s.supportPhone)}</strong>
+      through Chat with support in the app, or by phone or WhatsApp on <strong>{formatPhoneLocal(s.supportPhone)}</strong>
     </>
   ) : (
-    "using Help in the app"
+    "through Chat with support in the app"
   );
 
   const sections: LegalSection[] = [

@@ -7,10 +7,20 @@ import useSWR from "swr";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/cn";
 import { haptic } from "@/lib/haptics";
-import type { ShopChatMessage } from "@/lib/shop-chat";
 import { formatDate, formatTime, lagosDateKey } from "@/lib/time";
 
-type ChatData = { messages: ShopChatMessage[]; seenAt: string | null };
+export type ChatMessage = {
+  id: string;
+  body: string;
+  /** Who sent it; "system" messages are app notices shown centred. */
+  side: string;
+  mine: boolean;
+  sender: string;
+  createdAt: string;
+  orderId: string | null;
+};
+
+type ChatData = { messages: ChatMessage[]; seenAt: string | null };
 
 function dayLabel(iso: string) {
   const key = lagosDateKey(new Date(iso));
@@ -23,33 +33,41 @@ function dayLabel(iso: string) {
 
 /**
  * Full-screen chat: messages scroll with the page, the composer sticks to the bottom.
- * Polls for new messages every few seconds while open.
+ * Polls for new messages every few seconds while open. `embedded` fits it inside
+ * another layout (the admin console) instead of taking over the screen.
  */
 export function ChatView<T extends ChatData>({
   endpoint,
   initial,
   header,
   intro,
-  quickReplies = [],
+  quickReplies: quick = [],
   closed,
   placeholder = "Message",
   side,
+  embedded = false,
+  draft = "",
 }: {
-  side: "resident" | "vendor";
+  side: string;
   endpoint: string;
   initial: T;
   header: (data: T) => React.ReactNode;
   intro?: (data: T) => React.ReactNode;
-  quickReplies?: string[];
+  /** Suggested messages; a function can hide them once the chat gets going. */
+  quickReplies?: string[] | ((data: T) => string[]);
   closed?: (data: T) => React.ReactNode | null;
   placeholder?: string;
+  embedded?: boolean;
+  /** Text to start the composer with. */
+  draft?: string;
 }) {
   const { data = initial, mutate } = useSWR<T>(endpoint, { fallbackData: initial, refreshInterval: 2500, revalidateOnMount: false });
-  const [text, setText] = useState("");
+  const [text, setText] = useState(draft);
   const [sending, setSending] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const messages = data.messages;
   const closedNote = closed?.(data) ?? null;
+  const quickReplies = typeof quick === "function" ? quick(data) : quick;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: messages.length > 1 ? "smooth" : "auto", block: "end" });
@@ -64,7 +82,7 @@ export function ChatView<T extends ChatData>({
     setSending(true);
     haptic(6);
     setText("");
-    const optimistic: ShopChatMessage = {
+    const optimistic: ChatMessage = {
       id: `tmp-${Date.now()}`,
       body: msg,
       side,
@@ -92,10 +110,10 @@ export function ChatView<T extends ChatData>({
   }
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <header className="safe-top sticky top-0 z-30 border-b border-line/70 bg-bg/90 backdrop-blur-xl">{header(data)}</header>
+    <div className={cn("flex flex-col", !embedded && "min-h-dvh")}>
+      <header className={embedded ? "border-b border-line/70" : "safe-top sticky top-0 z-30 border-b border-line/70 bg-bg/90 backdrop-blur-xl"}>{header(data)}</header>
 
-      <div className="flex-1 px-4 pb-44 pt-4">
+      <div className={cn("flex-1", embedded ? "min-h-[45dvh] pb-6 pt-4" : "px-4 pb-44 pt-4")}>
         {intro ? intro(data) : null}
         <AnimatePresence initial={false}>
           {messages.map((m, i) => {
@@ -145,8 +163,13 @@ export function ChatView<T extends ChatData>({
         <div ref={endRef} />
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[480px] border-t border-line/70 bg-bg/95 backdrop-blur-xl">
-        <div className="safe-bottom px-4 pt-3">
+      <div
+        className={cn(
+          "z-30 border-t border-line/70 bg-bg/95 backdrop-blur-xl",
+          embedded ? "sticky bottom-0" : "fixed inset-x-0 bottom-0 mx-auto max-w-[480px]",
+        )}
+      >
+        <div className={cn("safe-bottom pt-3", embedded ? "pb-1" : "px-4")}>
           {closedNote ? (
             <div className="pb-1 text-center text-[13.5px] text-muted">{closedNote}</div>
           ) : (

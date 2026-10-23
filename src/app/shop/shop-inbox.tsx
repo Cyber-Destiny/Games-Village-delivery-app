@@ -7,6 +7,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { PushToggle } from "@/components/app/push";
 import { LegalLinks, OffPlatformNote } from "@/components/legal/notes";
+import { SupportCard } from "@/components/support/support-card";
 import { APP_NAME } from "@/lib/brand";
 import { Photo, shopPhoto } from "@/components/brand/photo";
 import { Avatar } from "@/components/ui/avatar";
@@ -30,11 +31,15 @@ export function ShopInbox({
   staffName,
   alsoResident,
   initial,
+  supportPhone,
+  supportUnread,
 }: {
   shop: { name: string; image: string | null; category: string };
   staffName: string;
   alsoResident: boolean;
   initial: Data;
+  supportPhone: string;
+  supportUnread: number;
 }) {
   const { data = initial } = useSWR<Data>("/api/shop-inbox", { fallbackData: initial, refreshInterval: 5000, revalidateOnMount: false });
   const [tab, setTab] = useState<"chats" | "riders">("chats");
@@ -126,6 +131,7 @@ export function ShopInbox({
       <section className="mx-5 mt-8 overflow-hidden rounded-[20px] border border-line bg-surface">
         <PushToggle description="Get alerted for new messages and riders" />
       </section>
+      <SupportCard phone={supportPhone} unread={supportUnread} title={`Need help from ${APP_NAME}?`} className="mx-5 mt-4" />
       <OffPlatformNote className="mx-5 mt-4">
         Hand orders only to riders booked in the app, for the name shown in your chat. Deliveries arranged outside {APP_NAME} aren&apos;t covered.
       </OffPlatformNote>

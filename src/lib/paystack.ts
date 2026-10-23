@@ -1,13 +1,23 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { demoMode } from "./demo";
+import { UserError } from "./errors";
 
-// Thin Paystack client. When PAYSTACK_SECRET_KEY is not set the app runs in demo
-// mode: checkout goes to a fake payment page and transfers settle after a few seconds.
+// Thin Paystack client. Without PAYSTACK_SECRET_KEY no money can move: payments are
+// refused with a clear message. In a local demo (DEMO_MODE=true) checkout goes to a
+// pretend payment page instead and transfers settle after a few seconds.
 
 const BASE = "https://api.paystack.co";
 
+export const PAYMENTS_OFF = "Online payments aren't switched on yet. Please check back soon.";
+
 export function paystackLive(): boolean {
   return !!process.env.PAYSTACK_SECRET_KEY;
+}
+
+/** Payments can be taken: Paystack is connected, or this is a local demo. */
+export function paymentsReady(): boolean {
+  return paystackLive() || demoMode();
 }
 
 export function paystackTestKey(): boolean {
@@ -66,6 +76,7 @@ export async function initializeTransaction(input: {
   metadata: Record<string, unknown>;
 }): Promise<{ url: string }> {
   if (!paystackLive()) {
+    if (!demoMode()) throw new UserError(PAYMENTS_OFF);
     return { url: `/pay/mock?reference=${encodeURIComponent(input.reference)}` };
   }
   const data = await call<{ authorization_url: string }>("/transaction/initialize", {
@@ -111,7 +122,8 @@ export function verifyWebhookSignature(rawBody: string, signature: string | null
 
 export type Bank = { name: string; code: string };
 
-const DEMO_BANKS: Bank[] = [
+// Used until Paystack is connected (and in demo mode).
+const BANKS: Bank[] = [
   { name: "Access Bank", code: "044" },
   { name: "Ecobank Nigeria", code: "050" },
   { name: "Fidelity Bank", code: "070" },
@@ -138,7 +150,7 @@ const DEMO_BANKS: Bank[] = [
 let bankCache: { at: number; banks: Bank[] } | null = null;
 
 export async function listBanks(): Promise<Bank[]> {
-  if (!paystackLive()) return DEMO_BANKS;
+  if (!paystackLive()) return BANKS;
   if (bankCache && Date.now() - bankCache.at < 24 * 60 * 60 * 1000) return bankCache.banks;
   const data = await call<Array<{ name: string; code: string; active: boolean; type: string }>>(
     "/bank?country=nigeria&perPage=200&currency=NGN",
@@ -154,6 +166,7 @@ export async function listBanks(): Promise<Bank[]> {
 export async function resolveAccount(accountNumber: string, bankCode: string): Promise<{ accountName: string }> {
   if (!/^\d{10}$/.test(accountNumber)) throw new PaystackError("Account number must be 10 digits.", true);
   if (!paystackLive()) {
+    if (!demoMode()) throw new UserError("Bank accounts can be added once payments are switched on (Paystack).");
     return { accountName: `DEMO ACCOUNT ${accountNumber.slice(-4)}` };
   }
   const data = await call<{ account_name: string }>(
@@ -163,7 +176,10 @@ export async function resolveAccount(accountNumber: string, bankCode: string): P
 }
 
 export async function createRecipient(input: { name: string; accountNumber: string; bankCode: string }): Promise<string> {
-  if (!paystackLive()) return `RCP_demo_${input.accountNumber}`;
+  if (!paystackLive()) {
+    if (!demoMode()) throw new PaystackError("Paystack isn't connected.", true);
+    return `RCP_demo_${input.accountNumber}`;
+  }
   const data = await call<{ recipient_code: string }>("/transferrecipient", {
     method: "POST",
     body: {
@@ -185,7 +201,10 @@ export async function initiateTransfer(input: {
   reference: string;
   reason: string;
 }): Promise<TransferResult> {
-  if (!paystackLive()) return { status: "pending", transferCode: `TRF_demo_${input.reference.slice(-8)}` };
+  if (!paystackLive()) {
+    if (!demoMode()) return { status: "failed", transferCode: null, message: "Paystack isn't connected." };
+    return { status: "pending", transferCode: `TRF_demo_${input.reference.slice(-8)}` };
+  }
   try {
     const data = await call<{ status: string; transfer_code: string }>("/transfer", {
       method: "POST",

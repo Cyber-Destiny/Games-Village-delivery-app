@@ -15,6 +15,7 @@ import {
   type OrderStatus,
 } from "./db/schema";
 import { ACTIVE_STATUSES, RUNNER_ACTIVE_STATUSES } from "./orders/status";
+import { supportWaiting } from "./support";
 import { lagosDateKey, startOfDay, weekStart } from "./time";
 
 const runnerUser = alias(users, "runner_user");
@@ -32,7 +33,7 @@ export async function getOverview() {
   const since14 = new Date(today.getTime() - 13 * 86400000);
   const yesterday = new Date(today.getTime() - 86400000);
 
-  const [[t], [y], series, live, [pendingPayouts], [failedPayouts], [runnersOnline], [runnersTotal], topShops, [pendingTopups], unread] = await Promise.all([
+  const [[t], [y], series, live, [pendingPayouts], [failedPayouts], [runnersOnline], [runnersTotal], topShops, [pendingTopups], unread, supportChats] = await Promise.all([
     db
       .select({
         delivered: count(),
@@ -90,6 +91,7 @@ export async function getOverview() {
         ),
       )
       .groupBy(messages.orderId),
+    supportWaiting(),
   ]);
 
   const days: Array<{ key: string; label: string; delivered: number; revenue: number }> = [];
@@ -150,6 +152,7 @@ export async function getOverview() {
       pendingTopups: pendingTopups?.n ?? 0,
       stuck: liveRows.filter((l) => l.alert).length,
       unreadChats: unread.reduce((a, u) => a + u.n, 0),
+      supportChats,
     },
     runners: { online: runnersOnline?.n ?? 0, total: runnersTotal?.n ?? 0 },
     topShops: topShops.map((s) => ({ name: s.name ?? "Any shop", n: s.n })),
@@ -159,14 +162,15 @@ export async function getOverview() {
 export type Overview = Awaited<ReturnType<typeof getOverview>>;
 
 export async function getAdminBadges() {
-  const [[p], [stuck]] = await Promise.all([
+  const [[p], [stuck], support] = await Promise.all([
     db.select({ n: count() }).from(payouts).where(eq(payouts.status, "pending_approval")),
     db
       .select({ n: count() })
       .from(orders)
       .where(or(and(eq(orders.status, "searching"), lt(orders.paidAt, new Date(Date.now() - 5 * 60000))), and(eq(orders.status, "assigned"), lt(orders.assignedAt, new Date(Date.now() - 2 * 60000))))),
+    supportWaiting(),
   ]);
-  return { payouts: p?.n ?? 0, orders: stuck?.n ?? 0 };
+  return { payouts: p?.n ?? 0, orders: stuck?.n ?? 0, support };
 }
 
 // ── orders ───────────────────────────────────────────────────

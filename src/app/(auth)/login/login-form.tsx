@@ -8,8 +8,10 @@ import { useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { OtpInput } from "@/components/ui/otp-input";
 import { toast } from "@/components/ui/toast";
+import { APP_NAME } from "@/lib/brand";
+import { telLink, whatsappLink } from "@/lib/contact";
 import { haptic } from "@/lib/haptics";
-import { maskPhone } from "@/lib/phone";
+import { formatPhoneLocal, maskPhone } from "@/lib/phone";
 import { requestCode, verifyCode } from "../actions";
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -21,7 +23,7 @@ function formatLocal(digits: string) {
   return `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}`;
 }
 
-export function LoginForm() {
+export function LoginForm({ supportPhone }: { supportPhone: string }) {
   const router = useRouter();
   const [step, setStep] = useState<"phone" | "code" | "done">("phone");
   const [raw, setRaw] = useState("");
@@ -226,6 +228,15 @@ export function LoginForm() {
                 </button>
               )}
             </div>
+            {supportPhone ? (
+              <p className="mt-3 text-center text-[13px] text-faint">
+                No code?{" "}
+                <a href={whatsappLink(supportPhone, `Hi ${APP_NAME}, I can't sign in. My number is `)} target="_blank" rel="noopener noreferrer" className="font-medium text-ink-2 underline underline-offset-2">
+                  WhatsApp us
+                </a>{" "}
+                or call <a href={telLink(supportPhone)} className="tnum font-medium text-ink-2">{formatPhoneLocal(supportPhone)}</a>
+              </p>
+            ) : null}
           </motion.div>
         ) : (
           <motion.div key="done" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid min-h-[360px] place-items-center">

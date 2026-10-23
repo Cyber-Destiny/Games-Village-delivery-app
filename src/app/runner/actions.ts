@@ -61,8 +61,8 @@ export async function saveBank(input: { bankCode: string; bankName: string; acco
   return attempt(async () => {
     const r = await runner();
     if (!/^\d{10}$/.test(input.accountNumber)) throw new UserError("Account number must be 10 digits.");
-    const { accountName } = await resolveAccount(input.accountNumber, input.bankCode).catch(() => {
-      throw new UserError("We couldn't verify that account.");
+    const { accountName } = await resolveAccount(input.accountNumber, input.bankCode).catch((err) => {
+      throw err instanceof UserError ? err : new UserError("We couldn't verify that account.");
     });
     await db
       .update(runnerProfiles)

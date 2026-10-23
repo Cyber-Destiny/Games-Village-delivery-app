@@ -1,15 +1,16 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, BadgeCheck, ChevronDown, Package, ShieldCheck, Wallet } from "lucide-react";
+import { ArrowRight, BadgeCheck, Bike, ChevronDown, MessageCircle, Package, Phone, ShieldCheck, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { categoryPhoto, Photo } from "@/components/brand/photo";
 import { Logo } from "@/components/brand/logo";
-import { Avatar } from "@/components/ui/avatar";
 import { LinkButton } from "@/components/ui/button";
 import { APP_NAME, ESTATE_NAME } from "@/lib/brand";
 import { CATEGORIES } from "@/lib/categories";
+import { telLink, whatsappLink } from "@/lib/contact";
+import { formatPhoneLocal } from "@/lib/phone";
 import { PHOTOS } from "@/lib/photos";
 
 type Props = {
@@ -18,6 +19,7 @@ type Props = {
   minFee: string;
   hours: string;
   loyaltyEvery: number;
+  supportPhone: string;
 };
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -73,11 +75,15 @@ const FAQ = (p: Props) => [
   },
   {
     q: "What if something is wrong or missing?",
-    a: "Don't give your code until you're happy. If something still goes wrong, message us from the errand and we'll sort it out.",
+    a: "Don't give your code until you're happy. If something still goes wrong, tap Get help on the errand to chat with us and we'll sort it out.",
   },
   {
     q: "When do you run?",
     a: `Every day, ${p.hours}. Errands inside ${ESTATE_NAME} only.`,
+  },
+  {
+    q: "How do I reach you?",
+    a: `Chat with us in the app (Account, then Chat with support)${p.supportPhone ? `, or call or WhatsApp ${formatPhoneLocal(p.supportPhone)}` : ""}.`,
   },
 ];
 
@@ -107,7 +113,7 @@ function Faq(props: Props) {
 }
 
 export function Landing(props: Props) {
-  const { signedIn, appHref, loyaltyEvery } = props;
+  const { signedIn, appHref, loyaltyEvery, supportPhone } = props;
   const cta = signedIn ? appHref : "/login";
 
   return (
@@ -173,10 +179,12 @@ export function Landing(props: Props) {
             transition={{ delay: 0.8, duration: 0.6, ease }}
             className="absolute inset-x-4 bottom-4 flex items-center gap-3 rounded-2xl bg-surface/95 p-3 shadow-[var(--shadow-raised)] backdrop-blur"
           >
-            <Avatar name="Adaeze Okafor" size={40} />
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-soft text-primary-soft-ink">
+              <Bike className="size-5" />
+            </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[14.5px] font-semibold text-ink">Adaeze is on the way</p>
-              <p className="truncate text-[12.5px] text-muted">From Village Mart · Block C, House 14</p>
+              <p className="truncate text-[14.5px] font-semibold text-ink">Your runner is on the way</p>
+              <p className="truncate text-[12.5px] text-muted">Picked up from the shop · heading to your door</p>
             </div>
           </motion.div>
         </motion.div>
@@ -286,6 +294,29 @@ export function Landing(props: Props) {
             </Link>
           </div>
         </Reveal>
+        {supportPhone ? (
+          <div id="contact" className="mt-6 flex scroll-mt-10 flex-col gap-4 rounded-[28px] border border-line bg-surface px-6 py-7 sm:flex-row sm:items-center sm:justify-between sm:px-10">
+            <div>
+              <h2 className="font-display text-[22px] font-bold text-ink sm:text-[26px]">Talk to us</h2>
+              <p className="mt-1 text-[15px] text-muted">
+                Call or WhatsApp <span className="tnum font-semibold text-ink">{formatPhoneLocal(supportPhone)}</span>, or chat with us inside the app.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <a href={telLink(supportPhone)} className="inline-flex h-12 items-center gap-2 rounded-2xl border border-line bg-surface px-5 text-[15px] font-semibold text-ink transition-colors hover:bg-surface-2">
+                <Phone className="size-4" /> Call
+              </a>
+              <a
+                href={whatsappLink(supportPhone, `Hi ${APP_NAME}, `)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-12 items-center gap-2 rounded-2xl border border-line bg-surface px-5 text-[15px] font-semibold text-ink transition-colors hover:bg-surface-2"
+              >
+                <MessageCircle className="size-4 text-[#128C4B] dark:text-[#5BE38F]" /> WhatsApp
+              </a>
+            </div>
+          </div>
+        ) : null}
         <footer className="mt-10 flex flex-col items-center justify-between gap-3 pb-6 text-[13px] text-muted sm:flex-row">
           <Logo size={26} className="scale-90" />
           <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
