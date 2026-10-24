@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, lt, notInArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, notInArray, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, type DbOrTx, type Tx } from "../db";
 import {
@@ -22,10 +22,20 @@ import { UserError } from "../errors";
 import { deliveryCode, orderCode, reference } from "../ids";
 import { naira } from "../money";
 import { notify } from "../notify";
-import { initializeTransaction, PAYMENTS_OFF, paymentsReady, PaystackError, paystackLive, resolveAccount, verifyTransaction, verifyTransfer } from "../paystack";
+import {
+  initializeTransaction,
+  PAYMENTS_OFF,
+  paymentsReady,
+  PaystackError,
+  paystackLive,
+  resolveAccount,
+  transfersEnabled,
+  verifyTransaction,
+  verifyTransfer,
+} from "../paystack";
 import { applyTransferOutcome, reconcileProcessingPayouts, sendTransfer, settleMockPayouts } from "../payouts";
 import { getSettings, isOpenNow } from "../settings";
-import { postCollectNotice } from "../shop-chat";
+import { postCollectNotice, staffIds } from "../shop-chat";
 import { computeQuote } from "./quote";
 import { weekStart } from "../time";
 import { walletCredit, walletDebit } from "../wallet";
@@ -57,7 +67,12 @@ function firstName(name: string | null | undefined) {
 async function noticeCollectBooked(order: Order, resident: Pick<User, "name"> | undefined) {
   if (!order.collectAs) return;
   const who = firstName(resident?.name) || "Your customer";
-  await postCollectNotice(order, `${who} booked a ${APP_NAME} rider to collect order #${order.code}. The rider will ask for "${order.collectAs}".`);
+  await postCollectNotice(
+    order,
+    order.shopConfirmedAt
+      ? `${who} booked a ${APP_NAME} rider to collect order #${order.code}. The rider will ask for "${order.collectAs}".`
+      : `${who} says they've paid for order #${order.code} and booked a ${APP_NAME} rider. Has the payment reached you? Confirm it and we'll send the rider, who will ask for "${order.collectAs}".`,
+  );
 }
 
 function payEmail(user: Pick<User, "email" | "phone">) {
@@ -125,6 +140,9 @@ export async function createOrder(user: User, raw: CreateOrderInput): Promise<{ 
 
   const category = getCategory(input.category);
   const items = input.items.filter((i) => i.name.trim());
+  if (category.kind === "buy" && !s.runnerBuys) {
+    throw new UserError("Order from a shop in its chat, pay them, then send a rider to collect it.");
+  }
 
   if (category.kind === "buy") {
     if (!items.length && !input.notes) throw new UserError("Tell us what to get.");
@@ -144,6 +162,10 @@ export async function createOrder(user: User, raw: CreateOrderInput): Promise<{ 
     [vendor] = await db.select().from(vendors).where(and(eq(vendors.id, input.vendorId), eq(vendors.isActive, true)));
     if (!vendor) throw new UserError("That shop is no longer available.");
   }
+
+  // Collect errands wait for the shop to confirm the resident's payment, unless
+  // nobody from the shop is on chat to confirm it.
+  const shopMustConfirm = !!collectAs && !!vendor && (await staffIds(vendor.id)).length > 0;
 
   const paidCount = await paidOrderCount(user.id);
   const quote = computeQuote(s, {
@@ -186,6 +208,7 @@ export async function createOrder(user: User, raw: CreateOrderInput): Promise<{ 
           total: quote.total,
           walletApplied: quote.walletApplied,
           deliveryCode: deliveryCode(),
+          shopConfirmedAt: collectAs && !shopMustConfirm ? new Date() : null,
         })
         .onConflictDoNothing({ target: orders.code })
         .returning();
@@ -366,6 +389,7 @@ async function tryAssign(orderId: string): Promise<"assigned" | "no-runners" | "
   const res = await db.transaction(async (tx) => {
     const [order] = await tx.select().from(orders).where(eq(orders.id, orderId)).for("update", { skipLocked: true });
     if (!order || order.status !== "searching") return { r: "skip" as const };
+    if (order.collectAs && !order.shopConfirmedAt) return { r: "skip" as const };
 
     const busy = tx
       .select({ id: orders.runnerId })
@@ -442,7 +466,7 @@ export async function dispatch() {
   const waiting = await db
     .select({ id: orders.id })
     .from(orders)
-    .where(eq(orders.status, "searching"))
+    .where(and(eq(orders.status, "searching"), or(isNull(orders.collectAs), isNotNull(orders.shopConfirmedAt))))
     .orderBy(asc(orders.paidAt))
     .limit(60);
   for (const w of waiting) {
@@ -647,7 +671,12 @@ export const purchaseSchema = z.object({
   actualCost: z.number().int().min(0),
   receiptId: z.string().uuid().nullable().optional(),
   account: z
-    .object({ bankCode: z.string().min(2).max(10), bankName: z.string().max(80), accountNumber: z.string().regex(/^\d{10}$/) })
+    .object({
+      bankCode: z.string().min(2).max(10),
+      bankName: z.string().max(80),
+      accountNumber: z.string().regex(/^\d{10}$/),
+      accountName: z.string().max(100).nullable().optional(),
+    })
     .nullable()
     .optional(),
 });
@@ -663,7 +692,7 @@ export async function submitPurchase(runner: User, orderId: string, raw: z.infer
   let accountName: string | null = null;
   if (input.account) {
     try {
-      accountName = (await resolveAccount(input.account.accountNumber, input.account.bankCode)).accountName;
+      accountName = (await resolveAccount(input.account.accountNumber, input.account.bankCode, input.account.accountName)).accountName;
     } catch (err) {
       throw err instanceof UserError ? err : new UserError("We couldn't verify that account number. Check it with the shop.");
     }
@@ -893,6 +922,55 @@ export async function completeDelivery(runner: User, orderId: string, code: stri
   await dispatch();
 }
 
+// ── shop confirms a collect errand's payment ─────────────────
+
+/**
+ * The shop says whether the resident's payment reached them. Only once it has
+ * is a rider sent. Shop staff answer for their own shop; admins can answer for
+ * any shop (e.g. after phoning them).
+ */
+export async function confirmShopPayment(user: User, orderId: string, received: boolean) {
+  const res = await db.transaction(async (tx) => {
+    const o = await lockOrder(tx, orderId);
+    if (!o.collectAs || !o.vendorId) throw new UserError("This errand doesn't need a shop confirmation.");
+    if (user.role !== "admin" && user.vendorId !== o.vendorId) throw new UserError("Errand not found.");
+    if (o.shopConfirmedAt) return { o, changed: false };
+    if (o.status !== "searching") throw new UserError(o.status === "cancelled" ? "This errand was cancelled." : "This errand has moved on already.");
+    const by = user.role === "admin" ? "Runam (on the shop's behalf)" : o.vendorName ?? "The shop";
+    if (received) {
+      await tx.update(orders).set({ shopConfirmedAt: new Date(), updatedAt: new Date() }).where(eq(orders.id, o.id));
+      await addEvent(tx, o.id, "shop_confirmed", `${by} confirmed the payment`, user.id);
+    } else {
+      await addEvent(tx, o.id, "shop_not_received", `${o.vendorName ?? "The shop"} hasn't received the payment yet`, user.id);
+    }
+    return { o, changed: true };
+  });
+  if (!res.changed) return;
+  const shop = res.o.vendorName ?? "The shop";
+  if (received) {
+    await postCollectNotice(res.o, `${shop} confirmed payment for order #${res.o.code}. Finding a rider now.`, { alert: false });
+    await notify(res.o.residentId, {
+      title: `${shop} confirmed your payment`,
+      body: `We're finding a rider for order #${res.o.code}.`,
+      url: `/orders/${res.o.id}`,
+      tag: `order-${res.o.id}`,
+    });
+    await dispatch();
+  } else {
+    await postCollectNotice(
+      res.o,
+      `${shop} hasn't received payment for order #${res.o.code} yet. Check the transfer went through, or cancel the errand to get the delivery fee back.`,
+      { alert: false },
+    );
+    await notify(res.o.residentId, {
+      title: `${shop} hasn't received your payment`,
+      body: "Check the transfer went through, or cancel to get the delivery fee back.",
+      url: `/orders/${res.o.id}`,
+      tag: `order-${res.o.id}`,
+    });
+  }
+}
+
 export async function adminMarkDelivered(admin: User, orderId: string) {
   const order = await db.transaction(async (tx) => {
     const o = await lockOrder(tx, orderId);
@@ -1091,6 +1169,7 @@ async function assertShopPayable(tx: Tx, row: typeof payouts.$inferSelect, order
 }
 
 export async function approvePayout(admin: User, payoutId: string) {
+  if (!transfersEnabled()) throw new UserError("This Paystack account can't send transfers. Pay from your bank app, then tap Mark as paid.");
   const p = await db.transaction(async (tx) => {
     const { row, order } = await lockPayout(tx, payoutId);
     if (row.status !== "pending_approval") throw new UserError("This payout isn't waiting for approval.");
@@ -1146,6 +1225,12 @@ export async function markPayoutManual(admin: User, payoutId: string) {
   });
   if (p.type === "vendor" && p.userId) {
     await notify(p.userId, { title: "Shop has been paid", body: "Collect the items and head out.", url: `/runner/jobs/${p.orderId}` });
+  }
+  if (p.type === "runner" && p.userId) {
+    await notify(p.userId, { title: "You've been paid 💸", body: `${naira(p.amount)} was sent to your bank account.`, url: "/runner/earnings" });
+  }
+  if (p.type === "withdrawal" && p.userId) {
+    await notify(p.userId, { title: "Withdrawal sent", body: `${naira(p.amount)} was sent to your bank account.`, url: "/wallet" });
   }
 }
 
@@ -1215,7 +1300,8 @@ export async function payRunner(admin: User, runnerId: string) {
         accountName: profile.accountName,
         recipientCode: profile.recipientCode,
         reference: reference("po"),
-        status: "processing",
+        // Without Paystack Transfers, the admin pays from their bank app and marks it paid.
+        status: transfersEnabled() ? "processing" : "pending_approval",
         approvedBy: admin.id,
         note: `Earnings for ${firstName(runner.name)}`,
       })
@@ -1226,6 +1312,7 @@ export async function payRunner(admin: User, runnerId: string) {
       .where(inArray(runnerEarnings.id, unpaid.map((u) => u.id)));
     return p;
   });
+  if (!transfersEnabled()) return res;
   await sendTransfer(res.id);
   await notify(runnerId, { title: "Payout on the way 💸", body: `${naira(res.amount)} is being sent to your bank.`, url: "/runner/earnings" });
   return res;
@@ -1246,13 +1333,14 @@ export const withdrawalSchema = z.object({
   bankCode: z.string().min(2).max(10),
   bankName: z.string().max(80),
   accountNumber: z.string().regex(/^\d{10}$/, "Account number must be 10 digits"),
+  accountName: z.string().max(100).nullable().optional(),
 });
 
 export async function requestWithdrawal(user: User, raw: z.infer<typeof withdrawalSchema>) {
   const input = withdrawalSchema.parse(raw);
   let accountName: string;
   try {
-    accountName = (await resolveAccount(input.accountNumber, input.bankCode)).accountName;
+    accountName = (await resolveAccount(input.accountNumber, input.bankCode, input.accountName)).accountName;
   } catch (err) {
     throw err instanceof UserError ? err : new UserError("We couldn't verify that account. Check the number and bank.");
   }

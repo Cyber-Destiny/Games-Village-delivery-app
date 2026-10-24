@@ -49,12 +49,12 @@ export function Badge({
   );
 }
 
-export function StatusBadge({ status, className }: { status: OrderStatus; className?: string }) {
+export function StatusBadge({ status, className, label }: { status: OrderStatus; className?: string; label?: string }) {
   const tone = statusTone(status);
   const live = !["delivered", "cancelled", "awaiting_payment"].includes(status);
   return (
     <Badge tone={tone} dot pulse={live} className={className}>
-      {STATUS_LABEL[status]}
+      {label ?? STATUS_LABEL[status]}
     </Badge>
   );
 }

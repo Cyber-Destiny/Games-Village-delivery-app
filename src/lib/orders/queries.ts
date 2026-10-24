@@ -85,6 +85,7 @@ async function buildOrderView(order: Order, viewer: Viewer) {
     pickupFrom: order.pickupFrom,
     deliverTo: order.deliverTo,
     collectAs: order.collectAs,
+    awaitingShop: order.status === "searching" && !!order.collectAs && !order.shopConfirmedAt,
     items: order.items,
     notes: order.notes,
     photoUrl: order.photoId ? `/api/uploads/${order.photoId}` : null,
@@ -178,6 +179,8 @@ export type OrderCardData = {
   createdAt: string;
   runnerFirstName: string | null;
   rated: boolean;
+  /** Collect errand still waiting for the shop to confirm payment. */
+  awaitingShop: boolean;
 };
 
 function summarize(o: Order): string {
@@ -211,6 +214,7 @@ export async function listResidentOrders(userId: string, limit = 50): Promise<Or
     createdAt: o.createdAt.toISOString(),
     runnerFirstName: runnerName ? firstName(runnerName) : null,
     rated: !!o.rating,
+    awaitingShop: o.status === "searching" && !!o.collectAs && !o.shopConfirmedAt,
   }));
 }
 

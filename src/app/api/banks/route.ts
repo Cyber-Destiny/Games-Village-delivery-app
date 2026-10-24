@@ -1,4 +1,4 @@
 import { json, withUser } from "@/lib/api";
-import { listBanks } from "@/lib/paystack";
+import { listBanks, typedAccountNames } from "@/lib/paystack";
 
-export const GET = withUser(async () => json({ banks: await listBanks() }));
+export const GET = withUser(async () => json({ banks: await listBanks(), typeName: typedAccountNames() }));

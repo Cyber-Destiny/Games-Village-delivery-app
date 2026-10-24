@@ -58,7 +58,7 @@ export async function rateErrand(orderId: string, rating: number, tags: string[]
   });
 }
 
-export async function withdraw(input: { amount: number; bankCode: string; bankName: string; accountNumber: string }) {
+export async function withdraw(input: { amount: number; bankCode: string; bankName: string; accountNumber: string; accountName?: string | null }) {
   return attempt(async () => {
     const user = await assertRole(...RESIDENT);
     const res = await requestWithdrawal(user, input);

@@ -135,7 +135,7 @@ export function WalletView({ data }: { data: WalletData }) {
             disabled={!bank.accountName || amount < 10000 || amount > data.balance}
             onClick={() =>
               start(async () => {
-                const res = await withdraw({ amount, bankCode: bank.bankCode, bankName: bank.bankName, accountNumber: bank.accountNumber });
+                const res = await withdraw({ amount, bankCode: bank.bankCode, bankName: bank.bankName, accountNumber: bank.accountNumber, accountName: bank.accountName });
                 if (!res.ok) return toast.error(res.error);
                 toast.success("Withdrawal requested", `${naira(amount)} to ${res.data.accountName}`);
                 setOpen(false);

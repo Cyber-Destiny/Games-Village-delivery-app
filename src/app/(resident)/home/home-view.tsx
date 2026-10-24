@@ -3,12 +3,12 @@
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, ChevronDown, ChevronRight, Clock3, Megaphone, MessageCircle, RotateCcw, Search } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ShopContactSheet } from "@/components/app/shop-contact-sheet";
 import { ChatList } from "@/components/chat/chat-list";
 import { CategoryThumb, categoryPhoto, Photo, shopPhoto } from "@/components/brand/photo";
 import { Avatar } from "@/components/ui/avatar";
-import { ESTATE_NAME } from "@/lib/brand";
+import { APP_NAME, ESTATE_NAME } from "@/lib/brand";
 import { CATEGORIES, getCategory } from "@/lib/categories";
 import { cn } from "@/lib/cn";
 import type { OrderCardData } from "@/lib/orders/queries";
@@ -49,7 +49,7 @@ function SectionTitle({ children, href, action }: { children: React.ReactNode; h
 }
 
 function LiveOrderCard({ o }: { o: OrderCardData }) {
-  const copy = statusCopy({ status: o.status, kind: o.kind, category: o.category, runnerName: o.runnerFirstName, place: o.place });
+  const copy = statusCopy({ status: o.status, kind: o.kind, category: o.category, runnerName: o.runnerFirstName, place: o.place, awaitingShop: o.awaitingShop });
   const step = milestoneIndex(o.status);
   return (
     <Link href={`/orders/${o.id}`} className="block w-full shrink-0 snap-center">
@@ -63,7 +63,7 @@ function LiveOrderCard({ o }: { o: OrderCardData }) {
                   <span className="absolute inset-0 animate-[var(--animate-pulse-ring)] rounded-full bg-accent" />
                   <span className="relative size-1.5 rounded-full bg-accent" />
                 </span>
-                {STATUS_LABEL[o.status]}
+                {o.awaitingShop ? "Waiting for shop" : STATUS_LABEL[o.status]}
               </span>
               <span className="tnum text-[12px] text-hero-muted">#{o.code}</span>
             </div>
@@ -170,6 +170,7 @@ export function HomeView({
     announcement: string;
     loyaltyEvery: number;
     loyaltyProgress: number;
+    runnerBuys: boolean;
     shops: Shop[];
     chats: ResidentThread[];
     activeOrders: OrderCardData[];
@@ -185,6 +186,11 @@ export function HomeView({
     setContactShop(s);
     setContactOpen(true);
   };
+  // Without "let a runner buy it", the food/groceries/gas tiles narrow the shop list instead.
+  const [shopFilter, setShopFilter] = useState<string | null>(null);
+  const shopsRef = useRef<HTMLElement>(null);
+  const tiles = CATEGORIES.filter((c) => data.runnerBuys || c.id !== "other");
+  const shown = shopFilter ? data.shops.filter((s) => s.category === shopFilter) : data.shops;
 
   return (
     <motion.main variants={stagger} initial="hidden" animate="show" className="pb-36">
@@ -218,9 +224,11 @@ export function HomeView({
         </motion.div>
       ) : null}
 
-      <motion.div variants={rise} className="mt-5">
-        <AskBox />
-      </motion.div>
+      {data.runnerBuys ? (
+        <motion.div variants={rise} className="mt-5">
+          <AskBox />
+        </motion.div>
+      ) : null}
 
       {data.activeOrders.length ? (
         <motion.section variants={rise} className="mt-7">
@@ -245,25 +253,66 @@ export function HomeView({
       <motion.section variants={rise} className="mt-8">
         <SectionTitle>What do you need?</SectionTitle>
         <div className="grid grid-cols-3 gap-x-3 gap-y-4 px-5">
-          {CATEGORIES.map((c) => (
-            <Link key={c.id} href={`/new?category=${c.id}`} className="group">
-              <motion.div whileTap={{ scale: 0.96 }} className="relative aspect-square overflow-hidden rounded-[18px] bg-sunken">
-                <Photo src={categoryPhoto(c.id)} alt="" sizes="(min-width: 480px) 150px, 33vw" className="transition-transform duration-500 group-hover:scale-105" />
-              </motion.div>
-              <p className="mt-1.5 text-center text-[13px] font-semibold leading-tight text-ink">{c.short === "Pickup" ? "Pick up" : c.label}</p>
-            </Link>
-          ))}
+          {tiles.map((c) => {
+            const tile = (
+              <>
+                <motion.div
+                  whileTap={{ scale: 0.96 }}
+                  className={cn("relative aspect-square overflow-hidden rounded-[18px] bg-sunken", shopFilter === c.id && "ring-[3px] ring-primary ring-offset-2 ring-offset-bg")}
+                >
+                  <Photo src={categoryPhoto(c.id)} alt="" sizes="(min-width: 480px) 150px, 33vw" className="transition-transform duration-500 group-hover:scale-105" />
+                </motion.div>
+                <p className="mt-1.5 text-center text-[13px] font-semibold leading-tight text-ink">{c.short === "Pickup" ? "Pick up" : c.label}</p>
+              </>
+            );
+            return data.runnerBuys || c.kind === "pickup" ? (
+              <Link key={c.id} href={`/new?category=${c.id}`} className="group">
+                {tile}
+              </Link>
+            ) : (
+              <button
+                key={c.id}
+                type="button"
+                className="group text-left"
+                aria-pressed={shopFilter === c.id}
+                onClick={() => {
+                  setShopFilter(shopFilter === c.id ? null : c.id);
+                  shopsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+              >
+                {tile}
+              </button>
+            );
+          })}
         </div>
       </motion.section>
 
       {data.shops.length ? (
-        <motion.section variants={rise} className="mt-9">
-          <SectionTitle>Shops in {ESTATE_NAME}</SectionTitle>
-          <p className="-mt-2 mb-4 px-5 text-[13.5px] text-muted">Chat with a shop to order, then send a rider to collect it.</p>
+        <motion.section variants={rise} ref={shopsRef} className="mt-9 scroll-mt-4">
+          <SectionTitle>{shopFilter ? `${getCategory(shopFilter).label} shops` : `Shops in ${ESTATE_NAME}`}</SectionTitle>
+          <p className="-mt-2 mb-4 px-5 text-[13.5px] text-muted">
+            Chat with a shop to order, then send a rider to collect it.
+            {shopFilter ? (
+              <>
+                {" "}
+                <button type="button" onClick={() => setShopFilter(null)} className="font-semibold text-primary">
+                  Show all shops
+                </button>
+              </>
+            ) : null}
+          </p>
           <div className="space-y-6 px-5">
-            {data.shops.map((s) => (
+            {shown.map((s) => (
               <ShopCard key={s.id} s={s} onOpen={() => openShop(s)} />
             ))}
+            {!shown.length ? (
+              <p className="rounded-[20px] border border-line bg-surface px-4 py-6 text-center text-[14px] text-muted">
+                No {getCategory(shopFilter ?? "other").label.toLowerCase()} shops on {APP_NAME} yet.{" "}
+                <Link href="/support" className="font-semibold text-primary">
+                  Suggest one
+                </Link>
+              </p>
+            ) : null}
           </div>
         </motion.section>
       ) : null}
@@ -315,7 +364,7 @@ export function HomeView({
         </motion.section>
       ) : null}
 
-      <ShopContactSheet shop={contactShop} open={contactOpen} onClose={() => setContactOpen(false)} />
+      <ShopContactSheet shop={contactShop} open={contactOpen} onClose={() => setContactOpen(false)} runnerBuys={data.runnerBuys} />
     </motion.main>
   );
 }

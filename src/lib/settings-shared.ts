@@ -20,6 +20,11 @@ export type Settings = {
   autoPayPartnerVendors: boolean;
   supportPhone: string;
   announcement: string;
+  /**
+   * "Let a runner buy it": the runner shops and the app pays the shop by bank
+   * transfer. Needs Paystack Transfers, so it's off until those are available.
+   */
+  runnerBuys: boolean;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -36,4 +41,5 @@ export const DEFAULT_SETTINGS: Settings = {
   autoPayPartnerVendors: true,
   supportPhone: "2347077802207",
   announcement: "",
+  runnerBuys: false,
 };

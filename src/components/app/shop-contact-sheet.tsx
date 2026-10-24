@@ -18,20 +18,22 @@ export function ShopContactSheet({
   open,
   onClose,
   showMenuLink = true,
+  runnerBuys,
 }: {
   shop: Shop | null;
   open: boolean;
   onClose: () => void;
   showMenuLink?: boolean;
+  runnerBuys: boolean;
 }) {
   return (
     <Sheet open={open && !!shop} onClose={onClose}>
-      {shop ? <Body shop={shop} showMenuLink={showMenuLink} /> : null}
+      {shop ? <Body shop={shop} showMenuLink={showMenuLink && runnerBuys} runnerBuys={runnerBuys} /> : null}
     </Sheet>
   );
 }
 
-function Body({ shop, showMenuLink }: { shop: Shop; showMenuLink: boolean }) {
+function Body({ shop, showMenuLink, runnerBuys }: { shop: Shop; showMenuLink: boolean; runnerBuys: boolean }) {
   return (
     <div className="overflow-y-auto px-5 pb-[max(env(safe-area-inset-bottom),20px)] pt-1 sm:px-6 sm:pt-6">
       <div className="relative aspect-[16/7] overflow-hidden rounded-[20px] bg-sunken">
@@ -54,7 +56,9 @@ function Body({ shop, showMenuLink }: { shop: Shop; showMenuLink: boolean }) {
       <p className="mt-4 text-[14px] leading-relaxed text-ink-2">
         {shop.chat
           ? `Chat with ${shop.name} to order and agree how to pay. When it's packed, send a rider to bring it to you.`
-          : `${shop.name} isn't taking chats yet, but a runner can buy it for you.`}
+          : runnerBuys
+            ? `${shop.name} isn't taking chats yet, but a runner can buy it for you.`
+            : `${shop.name} isn't taking chats yet. If you've already paid them, send a rider to collect your order.`}
       </p>
 
       <div className="mt-5 space-y-2">

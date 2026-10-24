@@ -14,12 +14,13 @@ import {
   adminReassign,
   approvePayout,
   cancelByAdmin,
+  confirmShopPayment,
   markPayoutManual,
   payRunner,
   rejectPayout,
   retryPayout,
 } from "@/lib/orders/service";
-import { resolveAccount } from "@/lib/paystack";
+import { resolveAccount, transfersEnabled } from "@/lib/paystack";
 import { isAllowedShopImage } from "@/lib/photos";
 import { normalizeEmail } from "@/lib/email-address";
 import { normalizePhone } from "@/lib/phone";
@@ -42,6 +43,14 @@ export async function reassignOrder(orderId: string, runnerId: string | null) {
 export async function cancelOrder(orderId: string, reason: string, refund: number) {
   return attempt(async () => {
     await cancelByAdmin(await admin(), orderId, reason, refund);
+    done("/admin", `/admin/orders/${orderId}`);
+  });
+}
+
+/** After phoning the shop: their payment arrived, so send a rider. */
+export async function confirmForShop(orderId: string) {
+  return attempt(async () => {
+    await confirmShopPayment(await admin(), orderId, true);
     done("/admin", `/admin/orders/${orderId}`);
   });
 }
@@ -109,7 +118,7 @@ const runnerSchema = z.object({
   nin: z.string().trim().max(20),
   guarantorName: z.string().trim().max(60),
   guarantorPhone: z.string().trim().max(20),
-  bank: z.object({ bankCode: z.string(), bankName: z.string(), accountNumber: z.string() }).nullable(),
+  bank: z.object({ bankCode: z.string(), bankName: z.string(), accountNumber: z.string(), accountName: z.string().max(100).nullable().optional() }).nullable(),
 });
 
 export async function saveRunner(input: z.infer<typeof runnerSchema>) {
@@ -126,10 +135,10 @@ export async function saveRunner(input: z.infer<typeof runnerSchema>) {
 
     let bank: { bankCode: string; bankName: string; accountNumber: string; accountName: string } | null = null;
     if (v.bank?.accountNumber) {
-      const { accountName } = await resolveAccount(v.bank.accountNumber, v.bank.bankCode).catch((err) => {
+      const { accountName } = await resolveAccount(v.bank.accountNumber, v.bank.bankCode, v.bank.accountName).catch((err) => {
         throw err instanceof UserError ? err : new UserError("We couldn't verify the bank account.");
       });
-      bank = { ...v.bank, accountName };
+      bank = { bankCode: v.bank.bankCode, bankName: v.bank.bankName, accountNumber: v.bank.accountNumber, accountName };
     }
 
     await db.transaction(async (tx) => {
@@ -200,7 +209,7 @@ const vendorSchema = z.object({
   image: z.string().refine(isAllowedShopImage, "That photo isn't valid.").nullable(),
   isPartner: z.boolean(),
   isActive: z.boolean(),
-  bank: z.object({ bankCode: z.string(), bankName: z.string(), accountNumber: z.string() }).nullable(),
+  bank: z.object({ bankCode: z.string(), bankName: z.string(), accountNumber: z.string(), accountName: z.string().max(100).nullable().optional() }).nullable(),
 });
 
 export async function saveVendor(input: z.infer<typeof vendorSchema>) {
@@ -219,10 +228,10 @@ export async function saveVendor(input: z.infer<typeof vendorSchema>) {
     }
     let bank = {};
     if (v.bank?.accountNumber) {
-      const { accountName } = await resolveAccount(v.bank.accountNumber, v.bank.bankCode).catch((err) => {
+      const { accountName } = await resolveAccount(v.bank.accountNumber, v.bank.bankCode, v.bank.accountName).catch((err) => {
         throw err instanceof UserError ? err : new UserError("We couldn't verify the shop's bank account.");
       });
-      bank = { ...v.bank, accountName, recipientCode: null };
+      bank = { bankCode: v.bank.bankCode, bankName: v.bank.bankName, accountNumber: v.bank.accountNumber, accountName, recipientCode: null };
     }
     const values = {
       name: v.name,
@@ -335,6 +344,9 @@ export async function saveSettings(next: Settings) {
     for (const fee of Object.values(next.fees)) if (fee < 0) throw new UserError("Fees can't be negative.");
     const phone = next.supportPhone ? normalizePhone(next.supportPhone) : "";
     if (next.supportPhone && !phone) throw new UserError("Support phone isn't a valid Nigerian number.");
+    if (next.runnerBuys && !transfersEnabled()) {
+      throw new UserError("“Let a runner buy it” needs Paystack Transfers to pay shops. Turn it on once your business is registered.");
+    }
     await persistSettings({ ...next, supportPhone: phone ?? "", announcement: next.announcement.trim().slice(0, 200) });
     done("/admin/settings", "/home", "/");
   });

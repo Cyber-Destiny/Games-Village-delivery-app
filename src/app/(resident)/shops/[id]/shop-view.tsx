@@ -13,7 +13,7 @@ import { haptic } from "@/lib/haptics";
 import { naira } from "@/lib/money";
 import type { Shop } from "@/lib/resident";
 
-export function ShopView({ shop }: { shop: Shop }) {
+export function ShopView({ shop, runnerBuys }: { shop: Shop; runnerBuys: boolean }) {
   const router = useRouter();
   const [cart, setCart] = useState<Record<string, number>>({});
   const count = Object.values(cart).reduce((a, b) => a + b, 0);
@@ -76,57 +76,72 @@ export function ShopView({ shop }: { shop: Shop }) {
         </LinkButton>
       </motion.section>
 
-      <section className="mt-10 px-5">
-        <h2 className="text-[15px] font-semibold text-ink">Or let a runner buy it</h2>
-        <p className="mt-0.5 text-[13px] text-muted">Pick items and we pay the shop for you. Prices may vary slightly.</p>
-        {shop.items.length ? (
-          <ul className="mt-3 divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
-            {shop.items.map((it) => {
-              const q = cart[it.id] ?? 0;
-              return (
-                <li key={it.id} className="flex items-center gap-3 px-4 py-3.5">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-medium text-ink">{it.name}</p>
-                    <p className="tnum text-[13.5px] text-muted">{naira(it.price)}</p>
-                  </div>
-                  <AnimatePresence mode="popLayout" initial={false}>
-                    {q ? (
-                      <motion.div key="q" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
-                        <QtyStepper value={q} onChange={(v) => setQty(it.id, v)} onRemove={() => setQty(it.id, 0)} />
-                      </motion.div>
-                    ) : (
-                      <motion.button
-                        key="a"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        whileTap={{ scale: 0.88 }}
-                        onClick={() => {
-                          haptic(6);
-                          setQty(it.id, 1);
-                        }}
-                        aria-label={`Add ${it.name}`}
-                        className="grid size-9 place-items-center rounded-full border border-line text-ink"
-                      >
-                        <Plus className="size-[18px]" strokeWidth={2.2} />
-                      </motion.button>
-                    )}
-                  </AnimatePresence>
-                </li>
-              );
-            })}
-          </ul>
-        ) : null}
+      {runnerBuys ? (
+        <section className="mt-10 px-5">
+          <h2 className="text-[15px] font-semibold text-ink">Or let a runner buy it</h2>
+          <p className="mt-0.5 text-[13px] text-muted">Pick items and we pay the shop for you. Prices may vary slightly.</p>
+          {shop.items.length ? (
+            <ul className="mt-3 divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
+              {shop.items.map((it) => {
+                const q = cart[it.id] ?? 0;
+                return (
+                  <li key={it.id} className="flex items-center gap-3 px-4 py-3.5">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[15px] font-medium text-ink">{it.name}</p>
+                      <p className="tnum text-[13.5px] text-muted">{naira(it.price)}</p>
+                    </div>
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      {q ? (
+                        <motion.div key="q" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
+                          <QtyStepper value={q} onChange={(v) => setQty(it.id, v)} onRemove={() => setQty(it.id, 0)} />
+                        </motion.div>
+                      ) : (
+                        <motion.button
+                          key="a"
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          whileTap={{ scale: 0.88 }}
+                          onClick={() => {
+                            haptic(6);
+                            setQty(it.id, 1);
+                          }}
+                          aria-label={`Add ${it.name}`}
+                          className="grid size-9 place-items-center rounded-full border border-line text-ink"
+                        >
+                          <Plus className="size-[18px]" strokeWidth={2.2} />
+                        </motion.button>
+                      )}
+                    </AnimatePresence>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
 
-        <Link href={`/new?vendor=${shop.id}`} className="mt-3 flex items-center gap-3 rounded-[18px] border border-line bg-surface px-4 py-3.5">
-          <PencilLine className="size-5 shrink-0 text-muted" />
-          <span className="flex-1">
-            <span className="block text-[14.5px] font-semibold text-ink">Need something not listed?</span>
-            <span className="block text-[12.5px] text-muted">Describe it and your runner will get it</span>
-          </span>
-          <ArrowRight className="size-4 text-faint" />
-        </Link>
-      </section>
+          <Link href={`/new?vendor=${shop.id}`} className="mt-3 flex items-center gap-3 rounded-[18px] border border-line bg-surface px-4 py-3.5">
+            <PencilLine className="size-5 shrink-0 text-muted" />
+            <span className="flex-1">
+              <span className="block text-[14.5px] font-semibold text-ink">Need something not listed?</span>
+              <span className="block text-[12.5px] text-muted">Describe it and your runner will get it</span>
+            </span>
+            <ArrowRight className="size-4 text-faint" />
+          </Link>
+        </section>
+      ) : shop.items.length ? (
+        <section className="mt-10 px-5">
+          <h2 className="text-[15px] font-semibold text-ink">What they sell</h2>
+          <p className="mt-0.5 text-[13px] text-muted">Prices may change. Confirm with {shop.name} in the chat.</p>
+          <ul className="mt-3 divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
+            {shop.items.map((it) => (
+              <li key={it.id} className="flex items-center justify-between gap-3 px-4 py-3.5">
+                <p className="min-w-0 truncate text-[15px] font-medium text-ink">{it.name}</p>
+                <p className="tnum shrink-0 text-[14px] text-muted">{naira(it.price)}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <AnimatePresence>
         {count > 0 ? (

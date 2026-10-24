@@ -21,7 +21,7 @@ import { naira } from "@/lib/money";
 import type { OrderView } from "@/lib/orders/queries";
 import { formatPhoneLocal } from "@/lib/phone";
 import { formatDateTime } from "@/lib/time";
-import { approve, cancelOrder, markDelivered, markManual, reassignOrder, retry } from "../../actions";
+import { approve, cancelOrder, confirmForShop, markDelivered, markManual, reassignOrder, retry } from "../../actions";
 
 type FreeRunner = { id: string; name: string; online: boolean };
 
@@ -70,6 +70,11 @@ export function AdminOrder({ initial, runners }: { initial: OrderView; runners: 
           <Button variant="secondary" onClick={() => setChat(true)}>
             <MessageCircle className="size-4" /> Chat {o.unread ? <Badge tone="accent">{o.unread}</Badge> : null}
           </Button>
+          {o.awaitingShop ? (
+            <Button variant="soft" loading={pending} onClick={() => act(() => confirmForShop(o.id), "Confirmed. Finding a rider.")}>
+              <CircleCheck className="size-4" /> Shop confirmed payment
+            </Button>
+          ) : null}
           {["searching", "assigned", "to_vendor"].includes(o.status) ? (
             <Button variant="secondary" onClick={() => setAssignOpen(true)}>
               <Repeat2 className="size-4" /> Reassign

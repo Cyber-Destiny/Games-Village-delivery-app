@@ -21,6 +21,7 @@ export default async function Page() {
       hours={`${to12h(s.openTime)} – ${to12h(s.closeTime)}`}
       loyaltyEvery={s.loyaltyEvery}
       supportPhone={s.supportPhone}
+      runnerBuys={s.runnerBuys}
     />
   );
 }

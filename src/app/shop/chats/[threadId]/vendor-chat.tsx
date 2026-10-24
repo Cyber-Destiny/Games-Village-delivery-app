@@ -2,14 +2,17 @@
 
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import { useSWRConfig } from "swr";
 import { CallButton } from "@/components/call/call-provider";
 import { ChatView } from "@/components/chat/chat-view";
+import { ConfirmPayment } from "@/components/shop/confirm-payment";
 import { Avatar } from "@/components/ui/avatar";
 import type { vendorChat } from "@/lib/shop-chat";
 
 type Data = Awaited<ReturnType<typeof vendorChat>>;
 
 export function VendorChat({ threadId, initial, bankLine }: { threadId: string; initial: Data; bankLine: string | null }) {
+  const { mutate } = useSWRConfig();
   const quick = [
     "Hi! Yes, we have it.",
     "Sorry, we're out of that today.",
@@ -24,18 +27,30 @@ export function VendorChat({ threadId, initial, bankLine }: { threadId: string; 
       initial={initial}
       quickReplies={quick}
       placeholder={`Message ${initial.customer}`}
-      header={() => (
-        <div className="flex h-16 items-center gap-3 px-3">
-          <Link href="/shop" aria-label="Back" className="grid size-10 place-items-center rounded-full hover:bg-sunken">
-            <ChevronLeft className="size-6" strokeWidth={2.2} />
-          </Link>
-          <Avatar name={initial.customer} size={40} />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[15.5px] font-semibold text-ink">{initial.customer}</p>
-            <p className="truncate text-[12px] text-muted">Customer in the estate</p>
+      header={(d) => (
+        <>
+          <div className="flex h-16 items-center gap-3 px-3">
+            <Link href="/shop" aria-label="Back" className="grid size-10 place-items-center rounded-full hover:bg-sunken">
+              <ChevronLeft className="size-6" strokeWidth={2.2} />
+            </Link>
+            <Avatar name={initial.customer} size={40} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[15.5px] font-semibold text-ink">{initial.customer}</p>
+              <p className="truncate text-[12px] text-muted">Customer in the estate</p>
+            </div>
+            <CallButton target={{ threadId }} peer={{ name: initial.customer, subtitle: "Customer", image: null, category: null }} />
           </div>
-          <CallButton target={{ threadId }} peer={{ name: initial.customer, subtitle: "Customer", image: null, category: null }} />
-        </div>
+          {d.waiting.map((w) => (
+            <ConfirmPayment
+              key={w.id}
+              orderId={w.id}
+              code={w.code}
+              collectAs={w.collectAs}
+              onDone={() => mutate(`/api/shop-inbox/${threadId}`)}
+              className="mx-3 mb-3 rounded-[16px]"
+            />
+          ))}
+        </>
       )}
     />
   );

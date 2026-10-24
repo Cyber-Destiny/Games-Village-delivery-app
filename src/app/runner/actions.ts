@@ -40,7 +40,7 @@ export async function atShop(orderId: string) {
 
 export async function confirmPurchase(
   orderId: string,
-  input: { actualCost: number; receiptId: string | null; account: { bankCode: string; bankName: string; accountNumber: string } | null },
+  input: { actualCost: number; receiptId: string | null; account: { bankCode: string; bankName: string; accountNumber: string; accountName?: string | null } | null },
 ) {
   return attempt(async () => submitPurchase(await runner(), orderId, input));
 }
@@ -57,11 +57,11 @@ export async function complete(orderId: string, code: string, photoId: string | 
   return attempt(async () => completeDelivery(await runner(), orderId, code, photoId));
 }
 
-export async function saveBank(input: { bankCode: string; bankName: string; accountNumber: string }) {
+export async function saveBank(input: { bankCode: string; bankName: string; accountNumber: string; accountName?: string | null }) {
   return attempt(async () => {
     const r = await runner();
     if (!/^\d{10}$/.test(input.accountNumber)) throw new UserError("Account number must be 10 digits.");
-    const { accountName } = await resolveAccount(input.accountNumber, input.bankCode).catch((err) => {
+    const { accountName } = await resolveAccount(input.accountNumber, input.bankCode, input.accountName).catch((err) => {
       throw err instanceof UserError ? err : new UserError("We couldn't verify that account.");
     });
     await db

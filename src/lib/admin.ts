@@ -118,7 +118,9 @@ export async function getOverview() {
   const liveRows = live.map(({ o, runnerName, residentName }) => {
     const age = Math.round((now - (o.paidAt ?? o.createdAt).getTime()) / 60000);
     let alert: string | null = null;
-    if (o.status === "searching" && age >= 5) alert = `Waiting ${age} min for a runner`;
+    if (o.status === "searching" && o.collectAs && !o.shopConfirmedAt) {
+      if (age >= 10) alert = `Waiting ${age} min for the shop to confirm payment`;
+    } else if (o.status === "searching" && age >= 5) alert = `Waiting ${age} min for a runner`;
     if (o.status === "assigned" && o.assignedAt && now - o.assignedAt.getTime() > 2 * 60000) alert = "Runner hasn't accepted";
     return {
       id: o.id,

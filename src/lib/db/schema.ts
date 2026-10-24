@@ -216,6 +216,9 @@ export const orders = pgTable(
     deliveryCode: text("delivery_code").notNull(),
     // Photo the runner takes at the door when handing over (proof of delivery).
     deliveryPhotoId: uuid("delivery_photo_id"),
+    // Collect errands: when the shop confirmed the resident's payment reached them.
+    // No rider is sent before this (set straight away if the shop has nobody on chat).
+    shopConfirmedAt: ts("shop_confirmed_at"),
     declinedRunnerIds: jsonb("declined_runner_ids").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
     loyaltyFree: boolean("loyalty_free").notNull().default(false),
     rating: smallint("rating"),

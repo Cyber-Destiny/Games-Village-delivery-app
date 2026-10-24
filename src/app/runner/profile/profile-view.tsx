@@ -99,7 +99,7 @@ export function ProfileView({
             disabled={!value.accountName}
             onClick={() =>
               start(async () => {
-                const res = await saveBank({ bankCode: value.bankCode, bankName: value.bankName, accountNumber: value.accountNumber });
+                const res = await saveBank({ bankCode: value.bankCode, bankName: value.bankName, accountNumber: value.accountNumber, accountName: value.accountName });
                 if (!res.ok) return toast.error(res.error);
                 toast.success("Payout account saved");
                 setOpen(false);

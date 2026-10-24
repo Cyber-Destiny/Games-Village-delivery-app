@@ -61,10 +61,12 @@ export async function getResidentHome(user: User) {
     announcement: s.announcement,
     loyaltyEvery: s.loyaltyEvery,
     loyaltyProgress: s.loyaltyEvery > 0 ? paidCount % s.loyaltyEvery : 0,
+    runnerBuys: s.runnerBuys,
     shops,
     chats,
     activeOrders: recent.filter((o) => activeIds.has(o.id)),
-    reorder: recent.filter((o) => o.status === "delivered").slice(0, 3),
+    // Buy errands can only be repeated while runners can buy for residents.
+    reorder: recent.filter((o) => o.status === "delivered" && (s.runnerBuys || o.kind === "pickup")).slice(0, 3),
   };
 }
 

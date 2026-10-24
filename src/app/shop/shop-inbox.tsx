@@ -7,6 +7,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { PushToggle } from "@/components/app/push";
 import { LegalLinks, OffPlatformNote } from "@/components/legal/notes";
+import { ConfirmPayment } from "@/components/shop/confirm-payment";
 import { SupportCard } from "@/components/support/support-card";
 import { APP_NAME } from "@/lib/brand";
 import { Photo, shopPhoto } from "@/components/brand/photo";
@@ -20,6 +21,7 @@ import { signOut } from "../(auth)/actions";
 type Data = { threads: VendorThread[]; pickups: VendorPickup[] };
 
 const PICKUP_STATUS: Record<string, string> = {
+  confirm: "Waiting for you to confirm payment",
   searching: "Finding a rider",
   assigned: "Rider assigned",
   to_vendor: "Rider on the way",
@@ -41,8 +43,9 @@ export function ShopInbox({
   supportPhone: string;
   supportUnread: number;
 }) {
-  const { data = initial } = useSWR<Data>("/api/shop-inbox", { fallbackData: initial, refreshInterval: 5000, revalidateOnMount: false });
-  const [tab, setTab] = useState<"chats" | "riders">("chats");
+  const { data = initial, mutate } = useSWR<Data>("/api/shop-inbox", { fallbackData: initial, refreshInterval: 5000, revalidateOnMount: false });
+  const toConfirm = data.pickups.filter((p) => p.confirm).length;
+  const [tab, setTab] = useState<"chats" | "riders">(initial.pickups.some((p) => p.confirm) ? "riders" : "chats");
   const unread = data.threads.reduce((a, t) => a + (t.unread ? 1 : 0), 0);
 
   return (
@@ -68,7 +71,7 @@ export function ShopInbox({
           onChange={setTab}
           options={[
             { value: "chats", label: "Chats", count: unread || undefined },
-            { value: "riders", label: "Riders coming", count: data.pickups.length || undefined },
+            { value: "riders", label: toConfirm ? "Confirm payment" : "Riders coming", count: data.pickups.length || undefined },
           ]}
         />
       </header>
@@ -109,15 +112,18 @@ export function ShopInbox({
                 {data.pickups.map((p) => (
                   <li key={p.id} className={cn("rounded-[20px] border bg-surface p-4", p.status === "at_vendor" ? "border-primary" : "border-line")}>
                     <div className="flex items-center justify-between gap-3">
-                      <span className={cn("text-[12.5px] font-semibold", p.status === "at_vendor" ? "text-primary" : "text-muted")}>{PICKUP_STATUS[p.status]}</span>
+                      <span className={cn("text-[12.5px] font-semibold", p.status === "at_vendor" ? "text-primary" : p.confirm ? "text-accent-soft-ink" : "text-muted")}>
+                        {PICKUP_STATUS[p.confirm ? "confirm" : p.status]}
+                      </span>
                       <span className="tnum text-[12.5px] text-faint">#{p.code}</span>
                     </div>
                     <p className="mt-1.5 text-[16px] font-semibold text-ink">
                       {p.collectAs ? <>Hand over the order for {p.collectAs}</> : "A runner is coming to buy for a resident"}
                     </p>
                     <p className="mt-0.5 flex items-center gap-1.5 text-[13px] text-muted">
-                      <Bike className="size-4" /> {p.runner ? `${p.runner} is the rider` : "Rider not assigned yet"} · booked {timeAgo(p.at)}
+                      <Bike className="size-4" /> {p.runner ? `${p.runner} is the rider` : p.confirm ? "No rider until you confirm" : "Rider not assigned yet"} · booked {timeAgo(p.at)}
                     </p>
+                    {p.confirm ? <ConfirmPayment orderId={p.id} code={p.code} collectAs={p.collectAs} onDone={() => mutate()} className="mt-3" /> : null}
                   </li>
                 ))}
               </ul>

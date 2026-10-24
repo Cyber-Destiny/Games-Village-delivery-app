@@ -54,10 +54,12 @@ type CopyInput = {
   place?: string | null;
   /** Collecting an order the resident already paid the shop for. */
   collect?: boolean;
+  /** Collect errands: still waiting for the shop to confirm the payment. */
+  awaitingShop?: boolean;
 };
 
 /** Headline + supporting line for the resident's tracking screen. */
-export function statusCopy({ status, kind, category, runnerName, place, collect }: CopyInput): { title: string; line: string } {
+export function statusCopy({ status, kind, category, runnerName, place, collect, awaitingShop }: CopyInput): { title: string; line: string } {
   const who = runnerName?.split(" ")[0] ?? "Your runner";
   const where = place || (kind === "pickup" ? "the pick-up point" : "the shop");
   const gas = category === "gas";
@@ -65,6 +67,9 @@ export function statusCopy({ status, kind, category, runnerName, place, collect 
     case "awaiting_payment":
       return { title: "Waiting for payment", line: "Complete payment to send your errand to a runner." };
     case "searching":
+      if (awaitingShop) {
+        return { title: `Waiting for ${place || "the shop"} to confirm`, line: "We'll send a rider as soon as they confirm your payment reached them." };
+      }
       return { title: "Finding you a runner", line: "We're matching your errand with the nearest free runner." };
     case "assigned":
       return { title: `${who} has your errand`, line: "They're confirming the details now." };

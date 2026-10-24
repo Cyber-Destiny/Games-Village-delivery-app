@@ -64,6 +64,13 @@
       "when": 1792878653511,
       "tag": "0008_delivery_photo",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792882900506,
+      "tag": "0009_shop_confirm",
+      "breakpoints": true
     }
   ]
 }

@@ -48,8 +48,9 @@ export function Tracker({ initial }: { initial: OrderView }) {
     kind: order.kind,
     category: order.category,
     runnerName: order.runner?.firstName,
-    place: order.kind === "pickup" ? order.pickupFrom : order.vendorName,
+    place: order.kind === "pickup" ? order.pickupFrom || order.vendorName : order.vendorName,
     collect: !!order.collectAs,
+    awaitingShop: order.awaitingShop,
   });
   const { progress, stage } = mapProgress(order.status, order.kind);
 
@@ -124,7 +125,7 @@ export function Tracker({ initial }: { initial: OrderView }) {
           </div>
           <div className="px-3 pb-3 pt-4">
             <div className="flex items-center justify-between gap-2">
-              <StatusBadge status={order.status} />
+              <StatusBadge status={order.status} label={order.awaitingShop ? "Waiting for shop" : undefined} />
               {order.status === "delivered" && order.at.delivered ? <span className="text-[12px] text-muted">{formatDateTime(order.at.delivered)}</span> : null}
             </div>
             <AnimatePresence mode="wait">
@@ -142,9 +143,27 @@ export function Tracker({ initial }: { initial: OrderView }) {
         </div>
       </section>
 
+      {/* waiting for the shop to confirm the payment reached them */}
+      {order.awaitingShop && order.vendorId ? (
+        <section className="mx-5 mt-4 rounded-[24px] border border-line bg-surface p-5">
+          <p className="font-semibold text-ink">{order.vendorName ?? "The shop"} is checking your payment</p>
+          <p className="mt-1 text-[13.5px] leading-relaxed text-muted">
+            No rider is sent until they confirm it reached them, so nobody waits at the counter. Taking long? Message them, or cancel to get the delivery fee back.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="soft" size="sm" onClick={() => router.push(`/chat/${order.vendorId}`)}>
+              <MessageCircle className="size-4" /> Message {order.vendorName ?? "the shop"}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setCancelOpen(true)}>
+              Cancel errand
+            </Button>
+          </div>
+        </section>
+      ) : null}
+
       {/* still searching after a few minutes */}
       <AnimatePresence>
-        {order.status === "searching" && order.at.paid && now - new Date(order.at.paid).getTime() > 3 * 60 * 1000 ? (
+        {order.status === "searching" && !order.awaitingShop && order.at.paid && now - new Date(order.at.paid).getTime() > 3 * 60 * 1000 ? (
           <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mx-5 mt-4 rounded-[24px] border border-line bg-surface p-5">
             <p className="font-semibold text-ink">All our runners are busy right now</p>
             <p className="mt-1 text-[13.5px] leading-relaxed text-muted">You&apos;re in the queue — the next free runner gets your errand automatically. Prefer not to wait? Cancel for a full refund to your wallet.</p>
@@ -332,7 +351,7 @@ export function Tracker({ initial }: { initial: OrderView }) {
               <p className="font-display text-[16px] font-semibold text-ink">{order.collectAs ? "Paid order pickup" : cat.label}</p>
               <p className="flex items-center gap-1 truncate text-[13px] text-ink-2">
                 {order.kind === "pickup" ? <MapPin className="size-3.5" /> : <Store className="size-3.5" />}
-                {order.kind === "pickup" ? `From ${order.pickupFrom ?? "—"}` : order.vendorName ?? "Any shop in the estate"}
+                {order.kind === "pickup" ? `From ${order.pickupFrom ?? order.vendorName ?? "—"}` : order.vendorName ?? "Any shop in the estate"}
               </p>
             </div>
             {order.collectAs && order.vendorId ? (

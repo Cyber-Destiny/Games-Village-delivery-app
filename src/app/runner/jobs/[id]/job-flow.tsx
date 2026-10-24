@@ -524,7 +524,7 @@ function AtShop({ o, limit, onChange }: { o: OrderView; limit: number; onChange:
               const res = await confirmPurchase(o.id, {
                 actualCost: cost,
                 receiptId: receipt?.id ?? null,
-                account: needsAccount && !over ? { bankCode: bank.bankCode, bankName: bank.bankName, accountNumber: bank.accountNumber } : null,
+                account: needsAccount && !over ? { bankCode: bank.bankCode, bankName: bank.bankName, accountNumber: bank.accountNumber, accountName: bank.accountName } : null,
               });
               if (!res.ok) return toast.error(res.error);
               haptic(12);

@@ -20,6 +20,7 @@ type Props = {
   hours: string;
   loyaltyEvery: number;
   supportPhone: string;
+  runnerBuys: boolean;
 };
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -38,11 +39,11 @@ function Reveal({ children, delay = 0, className }: { children: React.ReactNode;
   );
 }
 
-const STEPS = [
+const steps = (runnerBuys: boolean) => [
   {
     photo: PHOTOS.shopMart,
     title: "Order from an estate shop",
-    body: "Chat with the shop right in the app, agree the price and pay them directly. Or tell us what you need and your runner buys it.",
+    body: `Chat with the shop right in the app, agree the price and pay them directly.${runnerBuys ? " Or tell us what you need and your runner buys it." : ""}`,
   },
   {
     photo: PHOTOS.heroRider,
@@ -65,10 +66,19 @@ const FAQ = (p: Props) => [
     q: "When do I pay the delivery fee?",
     a: "When you book the rider, in the app, by card, transfer, USSD or wallet. Never give a rider cash. Cancel before they reach the shop and the fee goes back to your wallet.",
   },
-  {
-    q: "Can a runner buy things for me?",
-    a: "Yes. Set a budget, the runner shows us the receipt and we pay the shop directly. Any change goes to your wallet when the errand is delivered.",
-  },
+  ...(p.runnerBuys
+    ? [
+        {
+          q: "Can a runner buy things for me?",
+          a: "Yes. Set a budget, the runner shows us the receipt and we pay the shop directly. Any change goes to your wallet when the errand is delivered.",
+        },
+      ]
+    : [
+        {
+          q: "How do I order?",
+          a: "Open a shop in the app and chat with them: ask what's in stock and the price, then pay them as they ask. Once they confirm your payment, a rider picks it up and brings it to you.",
+        },
+      ]),
   {
     q: "Can I pay or book a runner directly?",
     a: `Please don't. Errands are only covered when they're booked and paid for in ${APP_NAME}. Anything you arrange with a runner or shop outside the app, like paying cash or booking them privately, is at your own risk, and we aren't responsible for what happens.`,
@@ -218,7 +228,7 @@ export function Landing(props: Props) {
           <h2 className="max-w-xl font-display text-[32px] font-bold leading-[1.08] tracking-[-0.02em] text-ink sm:text-[42px]">How it works</h2>
         </Reveal>
         <div className="mt-8 grid gap-8 lg:grid-cols-3 lg:gap-6">
-          {STEPS.map((s, i) => (
+          {steps(props.runnerBuys).map((s, i) => (
             <Reveal key={s.title} delay={i * 0.06}>
               <div className="relative aspect-[3/2] overflow-hidden rounded-[20px] bg-sunken">
                 <Photo src={s.photo} alt="" sizes="(min-width: 1024px) 360px, 100vw" />

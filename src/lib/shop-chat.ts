@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "./db";
 import { orders, shopMessages, shopThreads, users, vendors, type Order, type User } from "./db/schema";
 import { UserError } from "./errors";
@@ -196,9 +196,24 @@ async function vendorOwnThread(user: User, threadId: string) {
 
 export async function vendorChat(user: User, threadId: string) {
   const { t, name } = await vendorOwnThread(user, threadId);
-  const messages = await loadMessages(t.id, "vendor", "");
+  const [messages, waiting] = await Promise.all([
+    loadMessages(t.id, "vendor", ""),
+    // This customer's errands waiting for the shop to confirm payment.
+    db
+      .select({ id: orders.id, code: orders.code, collectAs: orders.collectAs })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.vendorId, t.vendorId),
+          eq(orders.residentId, t.residentId),
+          eq(orders.status, "searching"),
+          isNotNull(orders.collectAs),
+          isNull(orders.shopConfirmedAt),
+        ),
+      ),
+  ]);
   await db.update(shopThreads).set({ vendorReadAt: new Date() }).where(eq(shopThreads.id, t.id));
-  return { customer: shortName(name), messages, seenAt: t.residentReadAt?.toISOString() ?? null };
+  return { customer: shortName(name), messages, seenAt: t.residentReadAt?.toISOString() ?? null, waiting };
 }
 
 export async function vendorSend(user: User, threadId: string, body: string) {
@@ -256,6 +271,8 @@ export async function vendorPickups(user: User) {
     code: o.code,
     status: o.status,
     collectAs: o.collectAs,
+    // Waiting for the shop to say the resident's payment arrived.
+    confirm: o.status === "searching" && !!o.collectAs && !o.shopConfirmedAt,
     runner: runnerName ? firstName(runnerName) : null,
     at: (o.paidAt ?? o.createdAt).toISOString(),
   }));

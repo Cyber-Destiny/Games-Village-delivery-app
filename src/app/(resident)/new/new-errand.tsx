@@ -52,6 +52,7 @@ export type Prefill = {
 
 type Props = {
   prefill: Prefill;
+  runnerBuys: boolean;
   shops: Shop[];
   fees: Record<CategoryId, number>;
   loyaltyEvery: number;
@@ -282,7 +283,7 @@ export function NewErrand(props: Props) {
               <h2 className="font-display text-[28px] font-bold leading-tight">What do you need?</h2>
               <p className="mt-1 text-[15px] text-muted">Pick one to get started.</p>
               <div className="mt-6 space-y-2.5">
-                {CATEGORIES.map((c, i) => {
+                {CATEGORIES.filter((c) => props.runnerBuys || c.kind === "pickup").map((c, i) => {
                   return (
                     <motion.button
                       key={c.id}

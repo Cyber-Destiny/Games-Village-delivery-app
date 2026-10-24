@@ -21,11 +21,11 @@ It's a mobile-first web app (installable on the home screen). Everyone signs in 
 
 ## Two ways to order
 
-**Chat with the shop.** Residents tap a shop and chat with it in the app: ask what's in stock, agree the price, and pay the shop directly (the shop can send its bank details in one tap). Once it's packed, they tap **Send rider**, enter the name the order is under, and pay the delivery fee in the app. The shop sees in the same chat when a rider is booked and when the rider arrives. Cancelling before the rider reaches the shop refunds the fee to the wallet.
+**Chat with the shop.** Residents tap a shop and chat with it in the app: ask what's in stock, agree the price, and pay the shop directly (the shop can send its bank details in one tap). Once they've paid, they tap **Send rider**, enter the name the order is under, and pay the delivery fee in the app. The shop is then asked in the chat (and on its "Riders coming" tab) whether the payment reached them: only after **Payment received** is a rider sent. **Not yet** tells the resident to check their transfer or cancel. (Shops with nobody on chat skip this step; an admin can also confirm on the shop's behalf from the errand page.) The shop sees in the same chat when the rider arrives. At the door the rider enters the resident's delivery code and takes a photo of the handover as proof of delivery. Cancelling before the rider reaches the shop refunds the fee to the wallet.
 
 Phone numbers and WhatsApp links typed into chats are hidden, so orders stay on the platform.
 
-**Let a runner buy it.** The resident pays everything up front and the app pays the shop, as described below.
+**Let a runner buy it.** The resident pays everything up front and the app pays the shop, as described below. This needs Paystack Transfers, so it's **off by default**: switch it on in Admin → Settings once your Paystack account can send transfers. While it's off, the Food, Groceries and Gas tiles show those shops, and Pick up / Laundry errands (no buying involved) still work.
 
 ### In-app calls
 
@@ -99,8 +99,8 @@ Create a Postgres database (Neon free tier is plenty to start). Use the **pooled
 4. Sign in at `/login` with your admin email and add your real shops and runners in `/admin`. Don't set `DEMO_MODE` and don't run the demo seed on the live database.
 
 ### 3. Paystack
-1. Create a Paystack business account and complete **business activation** (Paystack needs this before you can accept live payments and use Transfers — usually means CAC registration).
-2. Put your secret key in `PAYSTACK_SECRET_KEY` (`sk_test_…` first, `sk_live_…` at launch).
+1. Create a Paystack business account and complete **business activation**. A **Starter** (unregistered) business can take payments but can't send transfers; a **Registered** business (CAC) can do both.
+2. Put your secret key in `PAYSTACK_SECRET_KEY` (`sk_test_…` first, `sk_live_…` at launch). On a Starter business also set `PAYSTACK_TRANSFERS=off`: bank account names are then typed in, and runner payouts and wallet withdrawals appear in Admin → Payouts for you to pay from your bank app and tap **Mark as paid**.
 3. In Paystack → *Settings → API Keys & Webhooks*, set:
    - **Webhook URL:** `https://YOUR-DOMAIN/api/paystack/webhook`
    - **Callback URL:** `https://YOUR-DOMAIN/pay/callback`
@@ -134,7 +134,8 @@ The Terms of Service (`/terms`) and Privacy Policy (`/privacy`) are written for 
 | `SESSION_SECRET` | ✅ | Long random string — `openssl rand -base64 48` |
 | `ADMIN_EMAILS` | ✅ | Comma-separated admin emails |
 | `RESEND_API_KEY`, `EMAIL_FROM` | ✅ | Sends sign-in codes by email |
-| `PAYSTACK_SECRET_KEY` | for payments | Empty = demo mode |
+| `PAYSTACK_SECRET_KEY` | for payments | Empty = no payments (pretend checkout only with `DEMO_MODE=true`) |
+| `PAYSTACK_TRANSFERS` | | `off` for a Starter Paystack business (no transfers): payouts are paid by hand |
 | `PAYSTACK_EMAIL_DOMAIN` | | Used to build an email for residents who haven't added one |
 | `SMS_PROVIDER`, `TERMII_*` | | Optional SMS alerts |
 | `DEMO_MODE` | | Local demo only: on-screen login codes and a pretend checkout. Never set on the live site. |

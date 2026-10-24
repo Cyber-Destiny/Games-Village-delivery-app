@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/dal";
-import { isCategoryId, type CategoryId } from "@/lib/categories";
+import { getCategory, isCategoryId, type CategoryId } from "@/lib/categories";
 import { db } from "@/lib/db";
 import { orders } from "@/lib/db/schema";
 import { paidOrderCount } from "@/lib/orders/service";
@@ -61,9 +61,15 @@ export default async function NewErrandPage({
 
   if (sp.q) prefill = { ...prefill, notes: sp.q.slice(0, 300), category: prefill.category ?? "other" };
 
+  // With "let a runner buy it" switched off, buying goes through the shop's chat.
+  if (!s.runnerBuys && prefill.category && getCategory(prefill.category).kind === "buy") {
+    redirect(prefill.vendorId ? `/shops/${prefill.vendorId}` : "/home");
+  }
+
   return (
     <NewErrand
       prefill={prefill}
+      runnerBuys={s.runnerBuys}
       shops={shops}
       fees={s.fees}
       loyaltyEvery={s.loyaltyEvery}

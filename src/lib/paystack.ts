@@ -20,6 +20,21 @@ export function paymentsReady(): boolean {
   return paystackLive() || demoMode();
 }
 
+/**
+ * Paystack can send money out (shops, runner earnings, wallet withdrawals).
+ * Starter (unregistered) businesses can't, so set PAYSTACK_TRANSFERS=off for
+ * them: payouts are then paid from the admin's bank app and marked as paid.
+ */
+export function transfersEnabled(): boolean {
+  if (!paystackLive()) return demoMode();
+  return process.env.PAYSTACK_TRANSFERS !== "off";
+}
+
+/** Bank account names are typed in rather than looked up (Starter accounts can't look them up). */
+export function typedAccountNames(): boolean {
+  return paystackLive() && !transfersEnabled();
+}
+
 export function paystackTestKey(): boolean {
   return (process.env.PAYSTACK_SECRET_KEY ?? "").startsWith("sk_test_");
 }
@@ -154,7 +169,11 @@ export async function listBanks(): Promise<Bank[]> {
   if (bankCache && Date.now() - bankCache.at < 24 * 60 * 60 * 1000) return bankCache.banks;
   const data = await call<Array<{ name: string; code: string; active: boolean; type: string }>>(
     "/bank?country=nigeria&perPage=200&currency=NGN",
-  );
+  ).catch((err) => {
+    console.error("[paystack] bank list failed, using the built-in list", err);
+    return null;
+  });
+  if (!data) return BANKS;
   const banks = data
     .filter((b) => b.active)
     .map((b) => ({ name: b.name, code: b.code }))
@@ -163,8 +182,13 @@ export async function listBanks(): Promise<Bank[]> {
   return banks;
 }
 
-export async function resolveAccount(accountNumber: string, bankCode: string): Promise<{ accountName: string }> {
+export async function resolveAccount(accountNumber: string, bankCode: string, typedName?: string | null): Promise<{ accountName: string }> {
   if (!/^\d{10}$/.test(accountNumber)) throw new PaystackError("Account number must be 10 digits.", true);
+  if (typedAccountNames()) {
+    const name = (typedName ?? "").trim().replace(/\s+/g, " ");
+    if (name.length < 3) throw new UserError("Type the account name exactly as the bank shows it.");
+    return { accountName: name.toUpperCase().slice(0, 80) };
+  }
   if (!paystackLive()) {
     if (!demoMode()) throw new UserError("Bank accounts can be added once payments are switched on (Paystack).");
     return { accountName: `DEMO ACCOUNT ${accountNumber.slice(-4)}` };
@@ -201,6 +225,9 @@ export async function initiateTransfer(input: {
   reference: string;
   reason: string;
 }): Promise<TransferResult> {
+  if (paystackLive() && !transfersEnabled()) {
+    return { status: "failed", transferCode: null, message: "This Paystack account can't send transfers. Pay from your bank app, then mark it as paid." };
+  }
   if (!paystackLive()) {
     if (!demoMode()) return { status: "failed", transferCode: null, message: "Paystack isn't connected." };
     return { status: "pending", transferCode: `TRF_demo_${input.reference.slice(-8)}` };

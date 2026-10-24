@@ -200,7 +200,7 @@ export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
                         const res = await saveVendor({
                           ...editing,
                           contacts: editing.contacts.map(({ label, email }) => ({ label, email })),
-                          bank: bank.accountName ? { bankCode: bank.bankCode, bankName: bank.bankName, accountNumber: bank.accountNumber } : null,
+                          bank: bank.accountName ? { bankCode: bank.bankCode, bankName: bank.bankName, accountNumber: bank.accountNumber, accountName: bank.accountName } : null,
                         });
                         if (!res.ok) return toast.error(res.error);
                         toast.success(editing.id ? "Shop saved" : "Shop added", editing.id ? undefined : "Now add their popular items.");

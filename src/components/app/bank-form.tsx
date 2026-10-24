@@ -9,13 +9,18 @@ import { Spinner } from "@/components/ui/spinner";
 
 export type BankValue = { bankCode: string; bankName: string; accountNumber: string; accountName: string | null };
 
-/** Bank picker + 10-digit account number, verified live against Paystack. */
+/**
+ * Bank picker + 10-digit account number, verified live against Paystack. On
+ * Paystack accounts that can't look names up (Starter), the name is typed in.
+ */
 export function BankFields({ value, onChange }: { value: BankValue; onChange: (v: BankValue) => void }) {
-  const { data } = useSWR<{ banks: Array<{ name: string; code: string }> }>("/api/banks", { revalidateOnFocus: false });
+  const { data } = useSWR<{ banks: Array<{ name: string; code: string }>; typeName?: boolean }>("/api/banks", { revalidateOnFocus: false });
+  const typeName = !!data?.typeName;
   const [state, setState] = useState<"idle" | "checking" | "ok" | "error">(value.accountName ? "ok" : "idle");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeName || !data) return;
     if (!/^\d{10}$/.test(value.accountNumber) || !value.bankCode) {
       setState("idle");
       return;
@@ -43,7 +48,7 @@ export function BankFields({ value, onChange }: { value: BankValue; onChange: (v
       clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value.accountNumber, value.bankCode]);
+  }, [value.accountNumber, value.bankCode, typeName, !!data]);
 
   return (
     <div className="space-y-3">
@@ -69,12 +74,22 @@ export function BankFields({ value, onChange }: { value: BankValue; onChange: (v
           placeholder="10 digits"
           maxLength={10}
           value={value.accountNumber}
-          onChange={(e) => onChange({ ...value, accountNumber: e.target.value.replace(/\D/g, "").slice(0, 10), accountName: null })}
+          onChange={(e) => onChange({ ...value, accountNumber: e.target.value.replace(/\D/g, "").slice(0, 10), accountName: typeName ? value.accountName : null })}
           className="tnum tracking-wider"
         />
       </Field>
+      {typeName ? (
+        <Field label="Account name" hint="Exactly as the bank shows it. Double-check it before saving.">
+          <Input
+            value={value.accountName ?? ""}
+            onChange={(e) => onChange({ ...value, accountName: e.target.value.trim() ? e.target.value : null })}
+            placeholder="e.g. ADAEZE OKAFOR"
+            autoCapitalize="characters"
+          />
+        </Field>
+      ) : null}
       <AnimatePresence mode="wait" initial={false}>
-        {state === "checking" ? (
+        {typeName ? null : state === "checking" ? (
           <motion.p key="c" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2 px-1 text-[13.5px] text-muted">
             <Spinner className="size-4" /> Checking account…
           </motion.p>

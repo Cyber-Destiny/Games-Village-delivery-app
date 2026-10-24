@@ -194,7 +194,7 @@ export function RunnersView({ runners }: { runners: AdminRunner[] }) {
               disabled={!!bank.accountNumber && !bank.accountName}
               onClick={() =>
                 start(async () => {
-                  const res = await saveRunner({ ...form, bank: bank.accountName ? { bankCode: bank.bankCode, bankName: bank.bankName, accountNumber: bank.accountNumber } : null });
+                  const res = await saveRunner({ ...form, bank: bank.accountName ? { bankCode: bank.bankCode, bankName: bank.bankName, accountNumber: bank.accountNumber, accountName: bank.accountName } : null });
                   if (!res.ok) return toast.error(res.error);
                   toast.success(form.id ? "Runner updated" : "Runner added", form.id ? undefined : "They can sign in with their email now.");
                   setForm(null);

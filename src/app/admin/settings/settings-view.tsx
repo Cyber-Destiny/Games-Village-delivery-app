@@ -17,7 +17,7 @@ import { naira } from "@/lib/money";
 import type { Settings } from "@/lib/settings-shared";
 import { saveSettings } from "../actions";
 
-type Status = { paystack: "off" | "demo" | "test" | "live"; sms: boolean; email: boolean; push: boolean; webhook: string; callback: string };
+type Status = { paystack: "off" | "demo" | "test" | "live"; transfers: boolean; sms: boolean; email: boolean; push: boolean; webhook: string; callback: string };
 
 export function SettingsView({ initial, status }: { initial: Settings; status: Status }) {
   const router = useRouter();
@@ -77,6 +77,12 @@ export function SettingsView({ initial, status }: { initial: Settings; status: S
                 <MoneyInput value={s.weeklyBonusAmount} onChange={(v) => setS({ ...s, weeklyBonusAmount: v })} />
               </Field>
             </div>
+            <Row
+              label="Let a runner buy it"
+              sub="Runners shop for residents and the app pays the shop. Needs Paystack Transfers (a registered business). When off, residents order from shops in the chat."
+              checked={s.runnerBuys}
+              onChange={(v) => setS({ ...s, runnerBuys: v })}
+            />
             <Row label="Pay partner shops automatically" sub="Turn off to approve every shop transfer yourself" checked={s.autoPayPartnerVendors} onChange={(v) => setS({ ...s, autoPayPartnerVendors: v })} />
           </Panel>
 
@@ -122,7 +128,10 @@ export function SettingsView({ initial, status }: { initial: Settings; status: S
           <Integration
             icon={<CreditCard className="size-5" />}
             name="Paystack"
-            state={status.paystack === "live" ? "Live" : status.paystack === "test" ? "Test mode" : status.paystack === "demo" ? "Demo mode" : "Not connected"}
+            state={
+              (status.paystack === "live" ? "Live" : status.paystack === "test" ? "Test mode" : status.paystack === "demo" ? "Demo mode" : "Not connected") +
+              ((status.paystack === "live" || status.paystack === "test") && !status.transfers ? " · payouts by hand" : "")
+            }
             ok={status.paystack === "live"}
             detail={
               status.paystack === "off" || status.paystack === "demo"

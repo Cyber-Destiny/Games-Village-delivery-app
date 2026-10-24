@@ -27,7 +27,8 @@ const TYPE = {
 
 const tone = (s: string) => (["success", "manual"].includes(s) ? "success" : ["failed", "reversed", "rejected"].includes(s) ? "danger" : "accent") as "success" | "danger" | "accent";
 
-export function PayoutsView({ data, mode }: { data: Data; mode: "off" | "demo" | "test" | "live" }) {
+/** `manual`: Paystack can't send transfers (Starter), so payouts are paid from the admin's bank app. */
+export function PayoutsView({ data, mode, manual }: { data: Data; mode: "off" | "demo" | "test" | "live"; manual: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [rejecting, setRejecting] = useState<AdminPayout | null>(null);
@@ -46,6 +47,16 @@ export function PayoutsView({ data, mode }: { data: Data; mode: "off" | "demo" |
   return (
     <>
       <AdminHeader title="Payouts" description="Money going out: shops, runners and wallet withdrawals." />
+
+      {manual ? (
+        <div className="mb-6 flex items-start gap-3 rounded-2xl bg-primary-soft px-4 py-3 text-[13.5px] text-primary-soft-ink">
+          <Landmark className="mt-0.5 size-4 shrink-0" />
+          <p>
+            Your Paystack plan collects payments but can&apos;t send transfers. Pay each payout below from your bank app, then tap <strong>Mark as paid</strong>. The
+            runner or resident gets a notification.
+          </p>
+        </div>
+      ) : null}
 
       {mode !== "live" ? (
         <div className="mb-6 flex items-start gap-3 rounded-2xl bg-accent-soft px-4 py-3 text-[13.5px] text-accent-soft-ink">
@@ -92,7 +103,7 @@ export function PayoutsView({ data, mode }: { data: Data; mode: "off" | "demo" |
                           </p>
                           <p className="mt-1 truncate text-[13px] text-ink-2">
                             <Landmark className="mr-1 inline size-3.5 text-muted" />
-                            {p.accountName} · {p.bankName} {p.accountNumber ? `••••${p.accountNumber.slice(-4)}` : ""}
+                            {p.accountName} · {p.bankName} {p.accountNumber ? (manual ? <span className="tnum font-semibold">{p.accountNumber}</span> : `••••${p.accountNumber.slice(-4)}`) : ""}
                           </p>
                           {p.failureReason ? <p className="mt-1 text-[12.5px] text-danger">{p.failureReason}</p> : null}
                           {p.type === "vendor" && p.status === "pending_approval" ? (
@@ -108,13 +119,19 @@ export function PayoutsView({ data, mode }: { data: Data; mode: "off" | "demo" |
                               <RotateCcw className="size-3.5" /> Retry
                             </Button>
                           ) : null
-                        ) : (
+                        ) : manual ? null : (
                           <Button size="sm" disabled={pending} onClick={() => run(() => approve(p.id), "Transfer sent")}>
                             <Check className="size-3.5" /> Approve & send
                           </Button>
                         )}
-                        <Button size="sm" variant="secondary" disabled={pending} onClick={() => run(() => markManual(p.id), "Recorded as paid")}>
-                          Paid another way
+                        <Button size="sm" variant={manual ? "primary" : "secondary"} disabled={pending} onClick={() => run(() => markManual(p.id), "Recorded as paid")}>
+                          {manual ? (
+                            <>
+                              <Check className="size-3.5" /> Mark as paid
+                            </>
+                          ) : (
+                            "Paid another way"
+                          )}
                         </Button>
                         {!failed ? (
                           <Button size="sm" variant="ghost" disabled={pending} onClick={() => setRejecting(p)}>
@@ -144,7 +161,7 @@ export function PayoutsView({ data, mode }: { data: Data; mode: "off" | "demo" |
                       const res = await payRunnerNow(r.id);
                       if (!res.ok) toast.error(`${r.name}: ${res.error}`);
                     }
-                    toast.success("Payouts sent");
+                    toast.success(manual ? "Added to Needs your action" : "Payouts sent");
                     router.refresh();
                   })
                 }
@@ -165,8 +182,12 @@ export function PayoutsView({ data, mode }: { data: Data; mode: "off" | "demo" |
                     <p className="truncate font-semibold text-ink">{r.name}</p>
                     <p className="truncate text-[12.5px] text-muted">{r.bank ? `${r.bank.bankName} ••••${r.bank.accountNumber?.slice(-4)}` : "No payout account"}</p>
                   </div>
-                  <Button size="sm" disabled={!r.bank || pending} onClick={() => run(() => payRunnerNow(r.id), `Sending to ${r.name.split(" ")[0]}`)}>
-                    Pay {naira(r.unpaid)}
+                  <Button
+                    size="sm"
+                    disabled={!r.bank || pending}
+                    onClick={() => run(() => payRunnerNow(r.id), manual ? "Added to Needs your action. Pay it from your bank app." : `Sending to ${r.name.split(" ")[0]}`)}
+                  >
+                    {manual ? "Prepare" : "Pay"} {naira(r.unpaid)}
                   </Button>
                 </li>
               ))}

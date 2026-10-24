@@ -1,7 +1,7 @@
 import { requireRole } from "@/lib/auth/dal";
 import { demoMode } from "@/lib/demo";
 import { emailConfigured } from "@/lib/email";
-import { appUrl, paystackLive, paystackTestKey } from "@/lib/paystack";
+import { appUrl, paystackLive, paystackTestKey, transfersEnabled } from "@/lib/paystack";
 import { getSettings } from "@/lib/settings";
 import { smsConfigured } from "@/lib/sms";
 import { SettingsView } from "./settings-view";
@@ -16,6 +16,7 @@ export default async function SettingsPage() {
       initial={s}
       status={{
         paystack: !paystackLive() ? (demoMode() ? "demo" : "off") : paystackTestKey() ? "test" : "live",
+        transfers: transfersEnabled(),
         sms: smsConfigured(),
         email: emailConfigured(),
         push: !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && !!process.env.VAPID_PRIVATE_KEY,
