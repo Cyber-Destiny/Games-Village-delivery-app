@@ -269,6 +269,7 @@ export async function getRunners() {
     return {
       id: u.id,
       name: u.name ?? "Runner",
+      email: u.email,
       phone: u.phone,
       isActive: u.isActive,
       online: p.online && fresh,
@@ -365,7 +366,7 @@ export async function getResidentsAdmin(q: string) {
   const where = [eq(users.role, "resident")];
   if (q.trim()) {
     const like = `%${q.trim()}%`;
-    where.push(or(ilike(users.name, like), ilike(users.phone, like), ilike(users.block, like))!);
+    where.push(or(ilike(users.name, like), ilike(users.phone, like), ilike(users.email, like), ilike(users.block, like))!);
   }
   const rows = await db
     .select({
@@ -385,6 +386,7 @@ export async function getResidentsAdmin(q: string) {
     return {
       id: u.id,
       name: u.name ?? "—",
+      email: u.email,
       phone: u.phone,
       block: u.block,
       house: u.house,

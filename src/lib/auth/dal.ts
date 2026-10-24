@@ -22,7 +22,7 @@ export function homeFor(user: Pick<User, "role">): string {
 }
 
 export function needsOnboarding(user: User): boolean {
-  return !user.name || (user.role === "resident" && (!user.block || !user.house));
+  return !user.name || (user.role === "resident" && (!user.block || !user.house || !user.phone));
 }
 
 export async function requireUser(): Promise<User> {

@@ -70,9 +70,11 @@ export const users = pgTable(
   "users",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    phone: text("phone").notNull(),
-    name: text("name"),
+    // People sign in with their email (a code is emailed to them), stored lower-case.
     email: text("email"),
+    // Contact number. Not used to sign in, so it isn't verified.
+    phone: text("phone"),
+    name: text("name"),
     role: roleEnum("role").notNull().default("resident"),
     // Address inside the estate
     block: text("block"),
@@ -88,7 +90,7 @@ export const users = pgTable(
     sessionVersion: integer("session_version").notNull().default(1),
     createdAt: createdAt(),
   },
-  (t) => [uniqueIndex("users_phone_idx").on(t.phone)],
+  (t) => [uniqueIndex("users_phone_idx").on(t.phone), uniqueIndex("users_email_idx").on(t.email)],
 );
 
 export const runnerProfiles = pgTable("runner_profiles", {
@@ -116,17 +118,20 @@ export const otpCodes = pgTable(
   "otp_codes",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    phone: text("phone").notNull(),
+    // Where the code was sent: an email address (the column predates email sign-in).
+    target: text("phone").notNull(),
+    ip: text("ip"),
     codeHash: text("code_hash").notNull(),
     expiresAt: ts("expires_at").notNull(),
     attempts: smallint("attempts").notNull().default(0),
     consumedAt: ts("consumed_at"),
     createdAt: createdAt(),
   },
-  (t) => [index("otp_phone_idx").on(t.phone, t.createdAt)],
+  (t) => [index("otp_phone_idx").on(t.target, t.createdAt), index("otp_ip_idx").on(t.ip, t.createdAt)],
 );
 
-export type VendorContact = { label: string | null; phone: string };
+/** A member of a shop's staff: they sign in with their email to answer the shop's chats. */
+export type VendorContact = { label: string | null; email: string; phone: string | null };
 
 export const vendors = pgTable("vendors", {
   id: uuid("id").primaryKey().defaultRandom(),

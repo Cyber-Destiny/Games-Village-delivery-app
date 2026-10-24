@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { forwardRef, useId } from "react";
+import { cloneElement, forwardRef, isValidElement, useId } from "react";
 import { cn } from "@/lib/cn";
 
 export function Field({
@@ -21,15 +21,19 @@ export function Field({
   htmlFor?: string;
   optional?: boolean;
 }) {
+  // Link the label to its input so screen readers (and tests) know what the box is for.
+  const autoId = useId();
+  const child = isValidElement<{ id?: string }>(children) ? children : null;
+  const id = htmlFor ?? child?.props.id ?? (child ? autoId : undefined);
   return (
     <div className={cn("space-y-1.5", className)}>
       {label ? (
-        <label htmlFor={htmlFor} className="flex items-baseline justify-between px-0.5 text-[13.5px] font-medium text-ink-2">
+        <label htmlFor={id} className="flex items-baseline justify-between px-0.5 text-[13.5px] font-medium text-ink-2">
           <span>{label}</span>
           {optional ? <span className="text-[12px] font-normal text-faint">Optional</span> : null}
         </label>
       ) : null}
-      {children}
+      {child && !child.props.id && id ? cloneElement(child, { id }) : children}
       <AnimatePresence initial={false} mode="wait">
         {error ? (
           <motion.p

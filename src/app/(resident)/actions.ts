@@ -7,6 +7,8 @@ import { assertRole } from "@/lib/auth/dal";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { attempt, UserError } from "@/lib/errors";
+import { normalizePhone } from "@/lib/phone";
+import { assertPhoneFree } from "@/lib/users";
 import {
   cancelByResident,
   createOrder,
@@ -67,7 +69,7 @@ export async function withdraw(input: { amount: number; bankCode: string; bankNa
 
 const profileSchema = z.object({
   name: z.string().trim().min(2, "Enter your name").max(60),
-  email: z.union([z.literal(""), z.email("Enter a valid email")]),
+  phone: z.string().trim().max(20),
   block: z.string().trim().min(1, "Add your block").max(40),
   house: z.string().trim().min(1, "Add your house number").max(40),
   street: z.string().trim().max(80),
@@ -80,9 +82,12 @@ export async function saveProfile(input: z.infer<typeof profileSchema>) {
     const parsed = profileSchema.safeParse(input);
     if (!parsed.success) throw new UserError(parsed.error.issues[0]?.message ?? "Check your details.");
     const v = parsed.data;
+    const phone = normalizePhone(v.phone);
+    if (!phone) throw new UserError("Enter a valid Nigerian phone number.");
+    if (phone !== user.phone) await assertPhoneFree(phone, user.id);
     await db
       .update(users)
-      .set({ name: v.name, email: v.email || null, block: v.block, house: v.house, street: v.street || null, landmark: v.landmark || null })
+      .set({ name: v.name, phone, block: v.block, house: v.house, street: v.street || null, landmark: v.landmark || null })
       .where(eq(users.id, user.id));
     revalidatePath("/account");
   });

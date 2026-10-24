@@ -18,7 +18,7 @@ export default async function RunnerProfilePage() {
   return (
     <ProfileView
       name={user.name ?? ""}
-      phone={user.phone}
+      email={user.email ?? ""}
       tag={p?.tag ?? null}
       bank={p?.accountNumber ? { bankName: p.bankName ?? "", accountNumber: p.accountNumber, accountName: p.accountName ?? "" } : null}
       rating={p?.ratingCount ? p.ratingSum / p.ratingCount : null}

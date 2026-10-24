@@ -63,7 +63,7 @@ export default async function TermsPage() {
         <>
           <ul>
             <li>You must be at least 18 years old to create an account.</li>
-            <li>You sign in with your phone number and a one-time code. Keep your phone and codes to yourself; you&apos;re responsible for what happens on your account.</li>
+            <li>You sign in with your email address and a one-time code we email you. Keep your email account and codes to yourself; you&apos;re responsible for what happens on your account.</li>
             <li>Give us accurate details, especially your name and address in the estate, so runners can find you.</li>
             <li>One account per person. Don&apos;t sign in as someone else or let others use your account.</li>
             <li>Tell us straight away if you think someone else has access to your account.</li>

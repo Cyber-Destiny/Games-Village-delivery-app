@@ -18,7 +18,7 @@ export default async function AccountPage() {
       profile={{
         name: user.name ?? "",
         email: user.email ?? "",
-        phone: user.phone,
+        phone: user.phone ? "0" + user.phone.slice(3) : "",
         block: user.block ?? "",
         house: user.house ?? "",
         street: user.street ?? "",

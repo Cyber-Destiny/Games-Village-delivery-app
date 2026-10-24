@@ -13,7 +13,7 @@ It's a mobile-first web app (installable on the home screen). Everyone signs in 
 | **Shop staff** | `/shop` | Chat with customers, see riders on their way |
 | **You (admin)** | `/admin` | Live dashboard, errands, runners, shops & their items, payout approvals, runner payouts, residents (incl. "gone quiet" watch), support chats, fees and settings |
 
-**Who gets in where.** Only the numbers in `ADMIN_PHONES` can open `/admin`. A number becomes a runner when you add it in Admin → Runners, and shop staff when you add it to a shop. Everyone else is a resident. If someone opens a page that isn't theirs (a runner trying `/admin`, say), they're sent back to their own home. Admins can also use the resident app, and there's an "Open admin console" button on their Account page.
+**Who gets in where.** Everyone signs in with their email and a 6-digit code we email them. Only the emails in `ADMIN_EMAILS` can open `/admin`. An email becomes a runner when you add it in Admin → Runners, and shop staff when you add it to a shop. Everyone else is a resident. If someone opens a page that isn't theirs (a runner trying `/admin`, say), they're sent back to their own home. Admins can also use the resident app, and there's an "Open admin console" button on their Account page.
 
 > "Runam" is a working name. Change it in one place: set `NEXT_PUBLIC_APP_NAME` (and `NEXT_PUBLIC_ESTATE_NAME`) in your environment.
 
@@ -39,7 +39,7 @@ Residents, runners and shop staff can tap **Chat with support** (Account, Profil
 
 ### Shop staff
 
-In `/admin/vendors`, add each shop's staff under **Shop staff on chat** (name + mobile number). They sign in with that number like everyone else and land in the shop inbox at `/shop`: chats with customers, and riders on their way. Residents never see these numbers. Removing someone signs them out.
+In `/admin/vendors`, add each shop's staff under **Shop staff on chat** (email + name). They sign in with that email like everyone else and land in the shop inbox at `/shop`: chats with customers, and riders on their way. Residents never see it. Removing someone signs them out.
 
 ## How the money flows (runner buys it)
 
@@ -74,12 +74,12 @@ With `DEMO_MODE=true` and no Paystack key, payments go through a pretend checkou
 
 Demo accounts (all made up, local only; the seed script refuses to run against anything but a local database):
 
-| Role | Phone |
+| Role | Email |
 |---|---|
-| Admin | `0800 000 0000` (whatever you put in `ADMIN_PHONES`) |
-| Resident | `0809 999 9999` (Amaka) |
-| Runner | `0801 111 1111` (Adaeze), `0802 222 2222`, `0803 333 3333` |
-| Shop staff | `0805 000 0002` (Chika, Village Mart) |
+| Admin | `admin@example.com` (whatever you put first in `ADMIN_EMAILS`) |
+| Resident | `amaka.obi@example.com` |
+| Runner | `adaeze.okafor@example.com`, `musa.bello@example.com`, `tunde.adeyemi@example.com` |
+| Shop staff | `chika@example.com` (Village Mart) |
 
 Start an errand as Amaka in one browser and accept it as Adaeze in another (or a private window) to see the whole flow.
 
@@ -96,7 +96,7 @@ Create a Postgres database (Neon free tier is plenty to start). Use the **pooled
 1. Import this GitHub repo into Vercel.
 2. Add the environment variables from `.env.example` (see the table below).
 3. Deploy. The `vercel-build` script runs database migrations automatically before each build.
-4. Sign in at `/login` with your admin number and add your real shops and runners in `/admin`. Don't set `DEMO_MODE` and don't run the demo seed on the live database.
+4. Sign in at `/login` with your admin email and add your real shops and runners in `/admin`. Don't set `DEMO_MODE` and don't run the demo seed on the live database.
 
 ### 3. Paystack
 1. Create a Paystack business account and complete **business activation** (Paystack needs this before you can accept live payments and use Transfers — usually means CAC registration).
@@ -111,8 +111,10 @@ Create a Postgres database (Neon free tier is plenty to start). Use the **pooled
 
 Paystack charges a fee on every payment; build that into your service fees in `/admin/settings`.
 
-### 4. SMS login codes (Termii)
-Set `SMS_PROVIDER=termii`, `TERMII_API_KEY`, and `TERMII_SENDER_ID` (register a sender ID with Termii; use `TERMII_CHANNEL=dnd` so codes reach DND numbers). **Nobody can sign in on the live site until this is done**: without it, login codes are only written to the server logs (Vercel → your project → Logs, search for `sms:console`).
+### 4. Sign-in codes by email (Resend)
+Create a Resend account, add your domain (it gives you a few DNS records to add), and set `RESEND_API_KEY` and `EMAIL_FROM` (e.g. `Runam <codes@runam.app>`). **Nobody can sign in on the live site until this is done**: without it, codes are only written to the server logs (Vercel → your project → Logs, search for `email:console`). Resend's free plan covers 3,000 emails a month (100 a day).
+
+SMS (Termii) is optional and only used for a few errand alerts. A Nigerian SMS sender ID needs CAC documents.
 
 ### 5. Push notifications (recommended for runners)
 ```bash
@@ -130,10 +132,11 @@ The Terms of Service (`/terms`) and Privacy Policy (`/privacy`) are written for 
 | `DATABASE_URL` | ✅ | Postgres connection string |
 | `APP_URL` | ✅ | Your public URL, e.g. `https://runam.app` (no trailing slash) |
 | `SESSION_SECRET` | ✅ | Long random string — `openssl rand -base64 48` |
-| `ADMIN_PHONES` | ✅ | Comma-separated admin numbers, e.g. `2348031234567` |
+| `ADMIN_EMAILS` | ✅ | Comma-separated admin emails |
+| `RESEND_API_KEY`, `EMAIL_FROM` | ✅ | Sends sign-in codes by email |
 | `PAYSTACK_SECRET_KEY` | for payments | Empty = demo mode |
 | `PAYSTACK_EMAIL_DOMAIN` | | Used to build an email for residents who haven't added one |
-| `SMS_PROVIDER`, `TERMII_*` | for SMS | Login codes and key alerts |
+| `SMS_PROVIDER`, `TERMII_*` | | Optional SMS alerts |
 | `DEMO_MODE` | | Local demo only: on-screen login codes and a pretend checkout. Never set on the live site. |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | for push | Web push notifications |
 | `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_ESTATE_NAME` | | Rename the app / estate |

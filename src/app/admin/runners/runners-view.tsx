@@ -20,8 +20,8 @@ import { formatPhoneLocal } from "@/lib/phone";
 import { timeAgo } from "@/lib/time";
 import { payRunnerNow, saveRunner, setRunnerActive } from "../actions";
 
-type Form = { id: string | null; name: string; phone: string; tag: string; nin: string; guarantorName: string; guarantorPhone: string };
-const blank: Form = { id: null, name: "", phone: "", tag: "", nin: "", guarantorName: "", guarantorPhone: "" };
+type Form = { id: string | null; name: string; email: string; phone: string; tag: string; nin: string; guarantorName: string; guarantorPhone: string };
+const blank: Form = { id: null, name: "", email: "", phone: "", tag: "", nin: "", guarantorName: "", guarantorPhone: "" };
 
 export function RunnersView({ runners }: { runners: AdminRunner[] }) {
   const router = useRouter();
@@ -37,7 +37,8 @@ export function RunnersView({ runners }: { runners: AdminRunner[] }) {
         ? {
             id: r.id,
             name: r.name,
-            phone: "0" + r.phone.slice(3),
+            email: r.email ?? "",
+            phone: r.phone ? "0" + r.phone.slice(3) : "",
             tag: r.tag ?? "",
             nin: r.nin ?? "",
             guarantorName: r.guarantorName ?? "",
@@ -71,7 +72,8 @@ export function RunnersView({ runners }: { runners: AdminRunner[] }) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-display text-[17px] font-semibold text-ink">{r.name}</p>
-                <p className="tnum text-[13px] text-muted">{formatPhoneLocal(r.phone)}</p>
+                <p className="truncate text-[13px] text-muted">{r.email ?? "No email yet: they can't sign in"}</p>
+                {r.phone ? <p className="tnum text-[13px] text-muted">{formatPhoneLocal(r.phone)}</p> : null}
               </div>
               {r.tag ? <span className="rounded-lg bg-hero px-2 py-1 text-[11.5px] font-semibold text-hero-ink">{r.tag}</span> : null}
             </div>
@@ -156,11 +158,14 @@ export function RunnersView({ runners }: { runners: AdminRunner[] }) {
         {runners.length === 0 ? <div className="card col-span-full p-10 text-center text-muted">No runners yet. Add your first one.</div> : null}
       </motion.div>
 
-      <Sheet open={!!form} onClose={() => setForm(null)} title={form?.id ? "Edit runner" : "Add a runner"} description="They sign in with this phone number." wide>
+      <Sheet open={!!form} onClose={() => setForm(null)} title={form?.id ? "Edit runner" : "Add a runner"} description="They sign in with this email. We email them a code each time." wide>
         {form ? (
           <div className="grid gap-4 pt-2 sm:grid-cols-2">
             <Field label="Full name">
               <Input value={form.name} onChange={set("name")} placeholder="e.g. Adaeze Okafor" />
+            </Field>
+            <Field label="Email" hint="How they sign in">
+              <Input value={form.email} onChange={set("email")} type="email" inputMode="email" autoCapitalize="none" placeholder="runner@example.com" />
             </Field>
             <Field label="Phone number">
               <Input value={form.phone} onChange={set("phone")} inputMode="tel" placeholder="0803 123 4567" />
@@ -191,7 +196,7 @@ export function RunnersView({ runners }: { runners: AdminRunner[] }) {
                 start(async () => {
                   const res = await saveRunner({ ...form, bank: bank.accountName ? { bankCode: bank.bankCode, bankName: bank.bankName, accountNumber: bank.accountNumber } : null });
                   if (!res.ok) return toast.error(res.error);
-                  toast.success(form.id ? "Runner updated" : "Runner added", form.id ? undefined : "They can sign in with their phone number now.");
+                  toast.success(form.id ? "Runner updated" : "Runner added", form.id ? undefined : "They can sign in with their email now.");
                   setForm(null);
                   router.refresh();
                 })

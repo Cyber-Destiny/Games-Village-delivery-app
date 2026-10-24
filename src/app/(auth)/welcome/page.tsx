@@ -15,6 +15,7 @@ export default async function WelcomePage() {
         isResident={user.role === "resident"}
         initial={{
           name: user.name ?? "",
+          phone: user.phone ? "0" + user.phone.slice(3) : "",
           block: user.block ?? "",
           house: user.house ?? "",
           street: user.street ?? "",

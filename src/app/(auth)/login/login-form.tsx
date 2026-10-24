@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, ArrowRight, Check, KeyRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, KeyRound, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -11,23 +11,17 @@ import { toast } from "@/components/ui/toast";
 import { APP_NAME } from "@/lib/brand";
 import { telLink, whatsappLink } from "@/lib/contact";
 import { haptic } from "@/lib/haptics";
-import { formatPhoneLocal, maskPhone } from "@/lib/phone";
+import { maskEmail } from "@/lib/email-address";
+import { formatPhoneLocal } from "@/lib/phone";
 import { requestCode, verifyCode } from "../actions";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
-function formatLocal(digits: string) {
-  const d = digits.slice(0, 11);
-  if (d.length <= 4) return d;
-  if (d.length <= 7) return `${d.slice(0, 4)} ${d.slice(4)}`;
-  return `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}`;
-}
-
 export function LoginForm({ supportPhone }: { supportPhone: string }) {
   const router = useRouter();
-  const [step, setStep] = useState<"phone" | "code" | "done">("phone");
+  const [step, setStep] = useState<"email" | "code" | "done">("email");
   const [raw, setRaw] = useState("");
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [devCode, setDevCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,19 +35,17 @@ export function LoginForm({ supportPhone }: { supportPhone: string }) {
     return () => clearTimeout(t);
   }, [countdown]);
 
-  const digits = raw.replace(/\D/g, "");
-  const local = digits.startsWith("234") ? "0" + digits.slice(3) : digits.startsWith("0") ? digits : digits ? "0" + digits : "";
-  const phoneReady = local.length === 11;
+  const emailReady = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(raw.trim());
 
   function send() {
     setError(null);
     start(async () => {
-      const res = await requestCode(local);
+      const res = await requestCode(raw);
       if (!res.ok) {
         setError(res.error);
         return;
       }
-      setPhone(res.data.phone);
+      setEmail(res.data.email);
       setDevCode(res.data.devCode);
       setCountdown(res.data.retryIn);
       setCode("");
@@ -65,7 +57,7 @@ export function LoginForm({ supportPhone }: { supportPhone: string }) {
     setError(null);
     setInvalid(false);
     start(async () => {
-      const res = await verifyCode(phone, v);
+      const res = await verifyCode(email, v);
       if (!res.ok) {
         setError(res.error);
         setInvalid(true);
@@ -81,7 +73,7 @@ export function LoginForm({ supportPhone }: { supportPhone: string }) {
 
   function resend() {
     start(async () => {
-      const res = await requestCode(phone);
+      const res = await requestCode(email);
       if (!res.ok) {
         toast.error(res.error);
         return;
@@ -95,37 +87,38 @@ export function LoginForm({ supportPhone }: { supportPhone: string }) {
   return (
     <div className="relative min-h-[360px]">
       <AnimatePresence mode="wait" initial={false}>
-        {step === "phone" ? (
+        {step === "email" ? (
           <motion.form
-            key="phone"
+            key="email"
             initial={{ opacity: 0, x: -24 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -24 }}
             transition={{ duration: 0.35, ease }}
             onSubmit={(e) => {
               e.preventDefault();
-              if (phoneReady) send();
+              if (emailReady) send();
             }}
           >
-            <h1 className="font-display text-[32px] font-bold leading-tight text-ink">What&apos;s your number?</h1>
-            <p className="mt-2 text-[15.5px] text-muted">We&apos;ll text you a 6-digit code to sign in. No passwords.</p>
+            <h1 className="font-display text-[32px] font-bold leading-tight text-ink">What&apos;s your email?</h1>
+            <p className="mt-2 text-[15.5px] text-muted">We&apos;ll email you a 6-digit code to sign in. No passwords.</p>
 
             <label className="mt-8 flex h-16 items-center gap-3 rounded-2xl border border-line bg-surface px-4 transition-[border-color,box-shadow] focus-within:border-primary focus-within:shadow-[0_0_0_4px_color-mix(in_oklab,var(--primary)_14%,transparent)]">
-              <span className="flex items-center gap-2 border-r border-line pr-3 text-[16px] font-medium text-ink-2">
-                <span aria-hidden className="text-[18px]">🇳🇬</span> +234
-              </span>
+              <Mail className="size-5 shrink-0 text-muted" />
               <input
                 autoFocus
-                inputMode="tel"
-                autoComplete="tel-national"
-                aria-label="Phone number"
-                placeholder="0803 123 4567"
-                value={formatLocal(local)}
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                aria-label="Email address"
+                placeholder="you@example.com"
+                value={raw}
                 onChange={(e) => {
                   setRaw(e.target.value);
                   setError(null);
                 }}
-                className="tnum h-full w-full bg-transparent font-display text-[22px] font-semibold tracking-wide text-ink outline-none placeholder:font-normal placeholder:text-faint"
+                className="h-full w-full min-w-0 bg-transparent text-[18px] font-medium text-ink outline-none placeholder:font-normal placeholder:text-faint"
               />
             </label>
             <AnimatePresence>
@@ -136,7 +129,7 @@ export function LoginForm({ supportPhone }: { supportPhone: string }) {
               ) : null}
             </AnimatePresence>
 
-            <Button type="submit" size="xl" block className="mt-6" disabled={!phoneReady} loading={pending}>
+            <Button type="submit" size="xl" block className="mt-6" disabled={!emailReady} loading={pending}>
               Send code <ArrowRight className="size-5" />
             </Button>
             <p className="mt-5 text-center text-[12.5px] leading-relaxed text-faint">
@@ -161,16 +154,16 @@ export function LoginForm({ supportPhone }: { supportPhone: string }) {
           >
             <button
               onClick={() => {
-                setStep("phone");
+                setStep("email");
                 setError(null);
               }}
               className="-ml-1 mb-4 inline-flex items-center gap-1.5 rounded-full px-1 py-1 text-[14px] font-medium text-muted hover:text-ink"
             >
-              <ArrowLeft className="size-4" /> Change number
+              <ArrowLeft className="size-4" /> Change email
             </button>
             <h1 className="font-display text-[32px] font-bold leading-tight text-ink">Enter the code</h1>
             <p className="mt-2 text-[15.5px] text-muted">
-              Sent to <span className="font-medium text-ink-2">{maskPhone(phone)}</span>
+              Sent to <span className="font-medium text-ink-2">{maskEmail(email)}</span>. Check Spam or Promotions if it isn&apos;t in your inbox.
             </p>
 
             {devCode ? (
@@ -231,7 +224,7 @@ export function LoginForm({ supportPhone }: { supportPhone: string }) {
             {supportPhone ? (
               <p className="mt-3 text-center text-[13px] text-faint">
                 No code?{" "}
-                <a href={whatsappLink(supportPhone, `Hi ${APP_NAME}, I can't sign in. My number is `)} target="_blank" rel="noopener noreferrer" className="font-medium text-ink-2 underline underline-offset-2">
+                <a href={whatsappLink(supportPhone, `Hi ${APP_NAME}, I can't sign in. My email is `)} target="_blank" rel="noopener noreferrer" className="font-medium text-ink-2 underline underline-offset-2">
                   WhatsApp us
                 </a>{" "}
                 or call <a href={telLink(supportPhone)} className="tnum font-medium text-ink-2">{formatPhoneLocal(supportPhone)}</a>

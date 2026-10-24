@@ -284,7 +284,7 @@ export function Landing(props: Props) {
           <div className="flex flex-col items-start gap-6 rounded-[28px] bg-primary px-6 py-12 text-primary-ink sm:flex-row sm:items-center sm:justify-between sm:px-12">
             <div>
               <h2 className="font-display text-[30px] font-bold leading-tight sm:text-[40px]">Ready when you are.</h2>
-              <p className="mt-1 text-[16px] opacity-80">Sign in with your phone number. It takes about 20 seconds.</p>
+              <p className="mt-1 text-[16px] opacity-80">Sign in with your email. It takes about 20 seconds.</p>
             </div>
             <Link
               href={cta}

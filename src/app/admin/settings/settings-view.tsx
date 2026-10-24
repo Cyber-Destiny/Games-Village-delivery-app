@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { BellRing, Check, Copy, CreditCard, MessageSquareText, Save } from "lucide-react";
+import { BellRing, Check, Copy, CreditCard, Mail, MessageSquareText, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { AdminHeader, Panel } from "@/components/admin/ui";
@@ -17,7 +17,7 @@ import { naira } from "@/lib/money";
 import type { Settings } from "@/lib/settings-shared";
 import { saveSettings } from "../actions";
 
-type Status = { paystack: "off" | "demo" | "test" | "live"; sms: boolean; push: boolean; webhook: string; callback: string };
+type Status = { paystack: "off" | "demo" | "test" | "live"; sms: boolean; email: boolean; push: boolean; webhook: string; callback: string };
 
 export function SettingsView({ initial, status }: { initial: Settings; status: Status }) {
   const router = useRouter();
@@ -137,7 +137,14 @@ export function SettingsView({ initial, status }: { initial: Settings; status: S
               </div>
             ) : null}
           </Integration>
-          <Integration icon={<MessageSquareText className="size-5" />} name="SMS (Termii)" state={status.sms ? "Connected" : "Not set up"} ok={status.sms} detail={status.sms ? "Login codes and key alerts are sent by SMS." : "Nobody can receive a login code until TERMII_API_KEY is added and SMS_PROVIDER=termii is set."} />
+          <Integration
+            icon={<Mail className="size-5" />}
+            name="Email (Resend)"
+            state={status.email ? "Connected" : "Not set up"}
+            ok={status.email}
+            detail={status.email ? "Sign-in codes are sent by email." : "Nobody can receive a sign-in code until RESEND_API_KEY is added."}
+          />
+          <Integration icon={<MessageSquareText className="size-5" />} name="SMS (Termii)" state={status.sms ? "Connected" : "Optional"} ok={status.sms} detail={status.sms ? "A few errand alerts are also sent by SMS." : "Optional. Only used for a few errand alerts; needs an approved sender ID."} />
           <Integration icon={<BellRing className="size-5" />} name="Push notifications" state={status.push ? "Connected" : "Not set up"} ok={status.push} detail={status.push ? "Runners and residents can turn on alerts in their profile." : "Generate VAPID keys (npx web-push generate-vapid-keys) and add them to the environment."} />
         </Panel>
       </div>

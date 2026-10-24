@@ -14,7 +14,6 @@ import { Field, Input } from "@/components/ui/field";
 import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/toast";
 import { APP_NAME } from "@/lib/brand";
-import { formatPhoneLocal } from "@/lib/phone";
 import { signOut } from "../../(auth)/actions";
 import { saveProfile } from "../actions";
 
@@ -44,7 +43,7 @@ export function AccountView({
       <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center pt-4 text-center">
         <Avatar name={profile.name} size={84} />
         <h1 className="mt-4 font-display text-[26px] font-bold text-ink">{profile.name}</h1>
-        <p className="tnum text-[14px] text-muted">{formatPhoneLocal(profile.phone)}</p>
+        <p className="text-[14px] text-muted">{profile.email}</p>
         <div className="mt-4 flex gap-2">
           <span className="rounded-full bg-primary-soft px-3 py-1.5 text-[12.5px] font-semibold text-primary-soft-ink">
             {delivered} errand{delivered === 1 ? "" : "s"} done
@@ -63,7 +62,7 @@ export function AccountView({
       ) : null}
 
       <section className="mt-6 divide-y divide-line overflow-hidden rounded-[22px] border border-line/70 bg-surface shadow-[var(--shadow-card)]">
-        <Row icon={<UserRound className="size-5" />} label="Personal details" sub="Name and email for receipts" onClick={() => setEdit(true)} />
+        <Row icon={<UserRound className="size-5" />} label="Personal details" sub={[profile.name, profile.phone.replace(/^(\d{4})(\d{3})(\d{4})$/, "$1 $2 $3")].filter(Boolean).join(" · ")} onClick={() => setEdit(true)} />
         <Row icon={<MapPin className="size-5" />} label="Delivery address" sub={[`Block ${profile.block}, House ${profile.house}`, profile.street].filter(Boolean).join(" · ")} onClick={() => setEdit(true)} />
         <PushToggle description="Know when your runner is on the way" />
       </section>
@@ -89,9 +88,12 @@ export function AccountView({
           <Field label="Name">
             <Input value={v.name} onChange={set("name")} />
           </Field>
-          <Field label="Email" optional hint="For Paystack payment receipts">
-            <Input type="email" inputMode="email" value={v.email} onChange={set("email")} placeholder="you@example.com" />
+          <Field label="Phone number" hint="So the team can reach you about an errand.">
+            <Input type="tel" inputMode="tel" autoComplete="tel-national" value={v.phone} onChange={set("phone")} placeholder="0803 123 4567" />
           </Field>
+          <p className="text-[13px] text-muted">
+            You sign in with <span className="font-medium text-ink-2">{profile.email}</span>. To change it, message support.
+          </p>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Block">
               <Input value={v.block} onChange={set("block")} />
@@ -112,7 +114,7 @@ export function AccountView({
             loading={pending}
             onClick={() =>
               start(async () => {
-                const res = await saveProfile({ name: v.name, email: v.email, block: v.block, house: v.house, street: v.street, landmark: v.landmark });
+                const res = await saveProfile({ name: v.name, phone: v.phone, block: v.block, house: v.house, street: v.street, landmark: v.landmark });
                 if (!res.ok) return toast.error(res.error);
                 toast.success("Saved");
                 setEdit(false);

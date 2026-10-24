@@ -21,8 +21,10 @@ import {
 } from "@/lib/orders/service";
 import { resolveAccount } from "@/lib/paystack";
 import { isAllowedShopImage } from "@/lib/photos";
-import { formatPhoneLocal, normalizePhone } from "@/lib/phone";
+import { normalizeEmail } from "@/lib/email-address";
+import { normalizePhone } from "@/lib/phone";
 import { saveSettings as persistSettings } from "@/lib/settings";
+import { assertPhoneFree } from "@/lib/users";
 import type { Settings } from "@/lib/settings-shared";
 
 const admin = () => assertRole("admin");
@@ -101,6 +103,7 @@ export async function creditWallet(userId: string, amount: number, note: string)
 const runnerSchema = z.object({
   id: z.string().uuid().nullable(),
   name: z.string().trim().min(2, "Enter the runner's name").max(60),
+  email: z.string(),
   phone: z.string(),
   tag: z.string().trim().max(20),
   nin: z.string().trim().max(20),
@@ -115,6 +118,8 @@ export async function saveRunner(input: z.infer<typeof runnerSchema>) {
     const parsed = runnerSchema.safeParse(input);
     if (!parsed.success) throw new UserError(parsed.error.issues[0]?.message ?? "Check the details.");
     const v = parsed.data;
+    const email = normalizeEmail(v.email);
+    if (!email) throw new UserError("Enter the runner's email. It's how they sign in.");
     const phone = normalizePhone(v.phone);
     if (!phone) throw new UserError("Enter a valid Nigerian phone number.");
     if (v.nin && !/^\d{11}$/.test(v.nin)) throw new UserError("NIN must be 11 digits.");
@@ -130,19 +135,27 @@ export async function saveRunner(input: z.infer<typeof runnerSchema>) {
     await db.transaction(async (tx) => {
       let userId = v.id;
       if (!userId) {
-        const [existing] = await tx.select().from(users).where(eq(users.phone, phone));
-        if (existing && existing.role === "admin") throw new UserError("That number belongs to an admin.");
+        const [existing] = await tx.select().from(users).where(eq(users.email, email));
+        if (existing && existing.role === "admin") throw new UserError("That email belongs to an admin.");
+        if (existing?.vendorId) throw new UserError("That email belongs to a shop's staff. Remove them from the shop first.");
+        await assertPhoneFree(phone, existing?.id ?? null, tx);
         if (existing) {
-          await tx.update(users).set({ role: "runner", name: v.name, isActive: true }).where(eq(users.id, existing.id));
+          await tx.update(users).set({ role: "runner", name: v.name, phone, isActive: true }).where(eq(users.id, existing.id));
           userId = existing.id;
         } else {
-          const [u] = await tx.insert(users).values({ phone, name: v.name, role: "runner" }).returning();
+          const [u] = await tx.insert(users).values({ email, phone, name: v.name, role: "runner" }).returning();
           userId = u.id;
         }
       } else {
-        const [clash] = await tx.select({ id: users.id }).from(users).where(and(eq(users.phone, phone), sql`${users.id} <> ${userId}`));
-        if (clash) throw new UserError("Another account already uses that phone number.");
-        await tx.update(users).set({ name: v.name, phone }).where(eq(users.id, userId));
+        const [clash] = await tx.select({ id: users.id }).from(users).where(and(eq(users.email, email), sql`${users.id} <> ${userId}`));
+        if (clash) throw new UserError("Another account already uses that email.");
+        await assertPhoneFree(phone, userId, tx);
+        const [before] = await tx.select({ email: users.email }).from(users).where(eq(users.id, userId));
+        // A new sign-in email signs them out everywhere.
+        await tx
+          .update(users)
+          .set({ name: v.name, email, phone, ...(before?.email !== email ? { sessionVersion: sql`${users.sessionVersion} + 1` } : {}) })
+          .where(eq(users.id, userId));
       }
       const profile = {
         tag: v.tag || null,
@@ -181,8 +194,8 @@ const vendorSchema = z.object({
   description: z.string().trim().max(160),
   location: z.string().trim().max(120),
   contacts: z
-    .array(z.object({ label: z.string().trim().max(40), phone: z.string().trim().max(20) }))
-    .max(6, "Add at most 6 numbers"),
+    .array(z.object({ label: z.string().trim().max(40), email: z.string().trim().max(254) }))
+    .max(6, "Add at most 6 people"),
   hours: z.string().trim().max(40),
   image: z.string().refine(isAllowedShopImage, "That photo isn't valid.").nullable(),
   isPartner: z.boolean(),
@@ -196,13 +209,13 @@ export async function saveVendor(input: z.infer<typeof vendorSchema>) {
     const parsed = vendorSchema.safeParse(input);
     if (!parsed.success) throw new UserError(parsed.error.issues[0]?.message ?? "Check the details.");
     const v = parsed.data;
-    // Shop staff: each number can sign in to the shop's chat inbox.
+    // Shop staff: each email can sign in to the shop's chat inbox.
     const contacts: VendorContact[] = [];
     for (const c of v.contacts) {
-      if (!c.phone) continue;
-      const phone = normalizePhone(c.phone);
-      if (!phone) throw new UserError(`"${c.phone}" isn't a Nigerian mobile number. Staff sign in with a code sent by SMS.`);
-      if (!contacts.some((x) => x.phone === phone)) contacts.push({ label: c.label || null, phone });
+      if (!c.email) continue;
+      const email = normalizeEmail(c.email);
+      if (!email) throw new UserError(`"${c.email}" isn't a valid email. Staff sign in with a code sent to it.`);
+      if (!contacts.some((x) => x.email === email)) contacts.push({ label: c.label || null, email, phone: null });
     }
     let bank = {};
     if (v.bank?.accountNumber) {
@@ -235,26 +248,26 @@ export async function saveVendor(input: z.infer<typeof vendorSchema>) {
   });
 }
 
-/** Makes each staff number a shop login, and signs out anyone who was removed. */
+/** Makes each staff email a shop login, and signs out anyone who was removed. */
 async function syncShopStaff(tx: Tx, vendorId: string, shopName: string, staff: VendorContact[]) {
   for (const c of staff) {
-    const [u] = await tx.select().from(users).where(eq(users.phone, c.phone));
+    const [u] = await tx.select().from(users).where(eq(users.email, c.email));
     if (!u) {
-      await tx.insert(users).values({ phone: c.phone, name: c.label || shopName, role: "vendor", vendorId });
+      await tx.insert(users).values({ email: c.email, name: c.label || shopName, role: "vendor", vendorId });
       continue;
     }
     if (u.role === "admin" || u.role === "runner") {
-      throw new UserError(`${formatPhoneLocal(c.phone)} belongs to a${u.role === "admin" ? "n admin" : " runner"} account.`);
+      throw new UserError(`${c.email} belongs to a${u.role === "admin" ? "n admin" : " runner"} account.`);
     }
-    if (u.vendorId && u.vendorId !== vendorId) throw new UserError(`${formatPhoneLocal(c.phone)} already works for another shop.`);
+    if (u.vendorId && u.vendorId !== vendorId) throw new UserError(`${c.email} already works for another shop.`);
     await tx
       .update(users)
       .set({ vendorId, isActive: true, name: u.role === "vendor" ? c.label || shopName : u.name })
       .where(eq(users.id, u.id));
   }
-  const keep = staff.map((c) => c.phone);
+  const keep = staff.map((c) => c.email);
   const current = await tx.select().from(users).where(eq(users.vendorId, vendorId));
-  for (const u of current.filter((u) => !keep.includes(u.phone))) {
+  for (const u of current.filter((u) => !u.email || !keep.includes(u.email))) {
     await tx
       .update(users)
       .set({ vendorId: null, sessionVersion: sql`${users.sessionVersion} + 1`, ...(u.role === "vendor" ? { isActive: false } : {}) })

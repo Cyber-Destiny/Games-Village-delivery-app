@@ -35,18 +35,18 @@ export default async function PrivacyPage() {
       body: (
         <>
           <p>
-            <strong>Everyone:</strong> your phone number, your name, and (if you give it) your email address. We also keep a record of when you sign in.
+            <strong>Everyone:</strong> your email address (you sign in with it), your name and your phone number. We also keep a record of when you sign in, and the internet (IP) address a sign-in code was requested from, to stop abuse.
           </p>
           <p>
             <strong>Residents:</strong> your address in the estate (block, house, street and any landmark), the errands you request, notes and photos you add, budgets,
             ratings, your wallet balance and history, and your chats with runners, shops and our support team.
           </p>
           <p>
-            <strong>Runners:</strong> your name and phone number, National Identification Number (NIN), your guarantor&apos;s name and phone number, your bank account for
+            <strong>Runners:</strong> your name, email and phone number, National Identification Number (NIN), your guarantor&apos;s name and phone number, your bank account for
             payouts, the errands you run, receipt photos, ratings and earnings.
           </p>
           <p>
-            <strong>Shop staff:</strong> your name, phone number and the shop you work for, and the chats you have with customers.
+            <strong>Shop staff:</strong> your name, email and the shop you work for, and the chats you have with customers.
           </p>
           <p>
             <strong>Payments:</strong> payment references, amounts, how you paid (for example card or transfer) and whether it succeeded. Card payments are handled by Paystack;
@@ -102,7 +102,7 @@ export default async function PrivacyPage() {
               <strong>Your runner</strong> sees your first name, your address in the estate and the details of your errand, so they can deliver it.
             </li>
             <li>
-              <strong>Shops</strong> you chat with see your first name and last initial, your messages, and the name your order is under. They never see your phone number or
+              <strong>Shops</strong> you chat with see your first name and last initial, your messages, and the name your order is under. They never see your email, phone number or
               address.
             </li>
             <li>
@@ -115,7 +115,7 @@ export default async function PrivacyPage() {
           <p>We also use trusted service providers who handle data only on our instructions:</p>
           <ul>
             <li>Paystack, to take payments and send transfers to shops, runners and your bank;</li>
-            <li>an SMS provider (such as Termii), to send your sign-in codes;</li>
+            <li>an email provider (Resend), to send your sign-in codes, and an SMS provider (such as Termii) if we text you about an errand;</li>
             <li>Vercel and Neon, to host the app and its database;</li>
             <li>Google, Apple and Mozilla notification services, to deliver push notifications;</li>
             <li>internet relay services (such as Cloudflare), to connect in-app calls. They help route encrypted call audio and can&apos;t listen to it.</li>

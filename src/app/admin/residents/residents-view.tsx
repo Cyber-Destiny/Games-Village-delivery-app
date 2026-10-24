@@ -91,9 +91,12 @@ export function ResidentsView({ residents, q }: { residents: AdminResident[]; q:
                           <p className="truncate font-semibold text-ink">
                             {r.name} {!r.isActive ? <Badge tone="danger">Disabled</Badge> : null}
                           </p>
-                          <a href={`tel:+${r.phone}`} className="tnum inline-flex items-center gap-1 text-[12.5px] text-muted hover:text-primary">
-                            <Phone className="size-3" /> {formatPhoneLocal(r.phone)}
-                          </a>
+                          {r.email ? <p className="truncate text-[12.5px] text-muted">{r.email}</p> : null}
+                          {r.phone ? (
+                            <a href={`tel:+${r.phone}`} className="tnum inline-flex items-center gap-1 text-[12.5px] text-muted hover:text-primary">
+                              <Phone className="size-3" /> {formatPhoneLocal(r.phone)}
+                            </a>
+                          ) : null}
                         </div>
                       </div>
                     </td>

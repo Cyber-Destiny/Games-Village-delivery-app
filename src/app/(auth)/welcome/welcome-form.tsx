@@ -15,7 +15,7 @@ export function WelcomeForm({
   initial,
 }: {
   isResident: boolean;
-  initial: { name: string; block: string; house: string; street: string; landmark: string };
+  initial: { name: string; phone: string; block: string; house: string; street: string; landmark: string };
 }) {
   const router = useRouter();
   const [v, setV] = useState(initial);
@@ -52,6 +52,9 @@ export function WelcomeForm({
 
       {isResident ? (
         <>
+          <Field label="Phone number" hint="So the team can reach you about an errand. Runners and shops never see it.">
+            <Input type="tel" inputMode="tel" autoComplete="tel-national" placeholder="e.g. 0803 123 4567" value={v.phone} onChange={set("phone")} />
+          </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Block">
               <Input placeholder="e.g. C" value={v.block} onChange={set("block")} />

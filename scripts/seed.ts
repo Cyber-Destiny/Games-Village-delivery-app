@@ -3,7 +3,7 @@
  *   npm run db:seed            → adds demo data if the database is empty
  *   npm run db:seed -- --reset → wipes everything first (DANGER: deletes all data)
  *
- * All shops, people and phone numbers below are made up. It only runs against a
+ * All shops, people, emails and phone numbers below are made up. It only runs against a
  * database on this machine; never load it into the live database.
  */
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -20,7 +20,8 @@ try {
   // ignore
 }
 
-const ADMIN_PHONE = (process.env.ADMIN_PHONES ?? "2348000000000").split(",")[0].trim();
+const ADMIN_EMAIL = (process.env.ADMIN_EMAILS ?? "admin@example.com").split(",")[0].trim().toLowerCase();
+const email = (name: string) => `${name.toLowerCase().replace(/[^a-z ]/g, "").trim().replace(/\s+/g, ".")}@example.com`;
 
 const client = postgres(process.env.DATABASE_URL!, { max: 1, prepare: false });
 const db = drizzle(client, { schema });
@@ -35,7 +36,7 @@ const SHOPS = [
   {
     name: "Mama Ngozi's Kitchen",
     image: PHOTOS.shopKitchen,
-    contacts: [{ label: "Ngozi", phone: "2348050000001" }],
+    contacts: [{ label: "Ngozi", email: "ngozi@example.com", phone: "2348050000001" }],
     category: "food",
     location: "Block D, by the basketball court",
     description: "Home-style Nigerian meals, cooked fresh daily",
@@ -51,7 +52,7 @@ const SHOPS = [
   {
     name: "Village Mart",
     image: PHOTOS.shopMart,
-    contacts: [{ label: "Chika", phone: "2348050000002" }, { label: "Emeka", phone: "2348050000012" }],
+    contacts: [{ label: "Chika", email: "chika@example.com", phone: "2348050000002" }, { label: "Emeka", email: "emeka@example.com", phone: "2348050000012" }],
     category: "groceries",
     location: "Estate market, shop 4",
     description: "Provisions, drinks, toiletries",
@@ -69,7 +70,7 @@ const SHOPS = [
   {
     name: "Prime Gas Point",
     image: PHOTOS.shopGas,
-    contacts: [{ label: "Sani", phone: "2348050000003" }],
+    contacts: [{ label: "Sani", email: "sani@example.com", phone: "2348050000003" }],
     category: "gas",
     location: "Gate 2 road",
     description: "Cooking gas refills, all cylinder sizes",
@@ -83,7 +84,7 @@ const SHOPS = [
   {
     name: "FreshFold Dry Cleaners",
     image: PHOTOS.shopDryCleaner,
-    contacts: [{ label: "Funmi", phone: "2348050000004" }],
+    contacts: [{ label: "Funmi", email: "funmi@example.com", phone: "2348050000004" }],
     category: "laundry",
     location: "Block A shopping row",
     description: "Wash, iron and dry-clean",
@@ -98,7 +99,7 @@ const SHOPS = [
   {
     name: "Suya Junction",
     image: PHOTOS.shopSuya,
-    contacts: [{ label: "Musa", phone: "2348050000005" }],
+    contacts: [{ label: "Musa", email: "musa@example.com", phone: "2348050000005" }],
     category: "food",
     location: "Opposite the gym",
     description: "Evenings only — beef and chicken suya",
@@ -112,7 +113,7 @@ const SHOPS = [
   {
     name: "CarePlus Pharmacy",
     image: PHOTOS.shopPharmacy,
-    contacts: [{ label: "Pharm. Bola", phone: "2348050000006" }],
+    contacts: [{ label: "Pharm. Bola", email: "bola@example.com", phone: "2348050000006" }],
     category: "other",
     location: "Estate market, shop 11",
     description: "Over-the-counter medicine and essentials",
@@ -170,8 +171,8 @@ async function main() {
   // Admin
   await db
     .insert(users)
-    .values({ phone: ADMIN_PHONE, name: "Estate Admin", role: "admin" })
-    .onConflictDoUpdate({ target: users.phone, set: { role: "admin" } });
+    .values({ email: ADMIN_EMAIL, phone: "2348000000000", name: "Estate Admin", role: "admin" })
+    .onConflictDoUpdate({ target: users.email, set: { role: "admin" } });
 
   // Shops
   const shopRows: Array<{ id: string; name: string; category: string; prices: Array<[string, number]> }> = [];
@@ -198,14 +199,14 @@ async function main() {
       s.items.map(([name, price, popular], j) => ({ vendorId: v.id, name, price: k(price), isPopular: popular, sort: j })),
     );
     shopRows.push({ id: v.id, name: v.name, category: v.category, prices: s.items.map(([n, p]) => [n, k(p)] as [string, number]) });
-    // Shop staff sign in with these numbers to chat with customers.
-    await db.insert(users).values(s.contacts.map((c) => ({ phone: c.phone, name: c.label, role: "vendor" as const, vendorId: v.id })));
+    // Shop staff sign in with these emails to chat with customers.
+    await db.insert(users).values(s.contacts.map((c) => ({ email: c.email, phone: c.phone, name: c.label, role: "vendor" as const, vendorId: v.id })));
   }
 
   // Runners
   const runnerIds: string[] = [];
   for (const r of RUNNERS) {
-    const [u] = await db.insert(users).values({ phone: r.phone, name: r.name, role: "runner" }).returning();
+    const [u] = await db.insert(users).values({ email: email(r.name), phone: r.phone, name: r.name, role: "runner" }).returning();
     await db.insert(runnerProfiles).values({
       userId: u.id,
       tag: r.tag,
@@ -225,7 +226,7 @@ async function main() {
   for (const [i, [name, block, house]] of RESIDENTS.entries()) {
     const [u] = await db
       .insert(users)
-      .values({ phone: `234809999${String(9999 - i).padStart(4, "0")}`, name, block, house, role: "resident" })
+      .values({ email: email(name), phone: `234809999${String(9999 - i).padStart(4, "0")}`, name, block, house, role: "resident" })
       .returning();
     residentIds.push(u.id);
   }
@@ -330,9 +331,9 @@ async function main() {
   }
 
   console.log(`✓ Seeded ${SHOPS.length} shops, ${RUNNERS.length} runners, ${RESIDENTS.length} residents, ${made} past errands.`);
-  console.log(`  Admin phone: ${ADMIN_PHONE}`);
-  console.log(`  Demo resident: 0809 999 9999 (Amaka Obi) · Demo runner: 0801 111 1111 (Adaeze)`);
-  console.log(`  Demo shop staff: 0805 000 0002 (Chika, Village Mart)`);
+  console.log(`  Admin: ${ADMIN_EMAIL}`);
+  console.log(`  Demo resident: amaka.obi@example.com · Demo runner: adaeze.okafor@example.com`);
+  console.log(`  Demo shop staff: chika@example.com (Village Mart)`);
 }
 
 main()

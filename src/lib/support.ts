@@ -149,7 +149,7 @@ export async function supportInbox() {
     .limit(200);
   return rows.map(({ t, u, shop, unread }) => ({
     id: t.id,
-    name: u.name || formatPhoneLocal(u.phone),
+    name: u.name || u.email || "No name yet",
     role: roleLabel(u, shop),
     preview: t.lastPreview ?? "",
     at: t.lastMessageAt.toISOString(),
@@ -188,6 +188,7 @@ export async function adminSupportChat(threadId: string) {
       id: u.id,
       name: u.name || "No name yet",
       phone: u.phone,
+      email: u.email,
       role: roleLabel(u, shop),
       address: u.block && u.house ? `Block ${u.block}, House ${u.house}` : null,
       active: u.isActive,

@@ -11,13 +11,12 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/toast";
-import { formatPhoneLocal } from "@/lib/phone";
 import { signOut } from "../../(auth)/actions";
 import { saveBank } from "../actions";
 
 export function ProfileView({
   name,
-  phone,
+  email,
   tag,
   bank,
   rating,
@@ -26,7 +25,7 @@ export function ProfileView({
   supportUnread,
 }: {
   name: string;
-  phone: string;
+  email: string;
   tag: string | null;
   bank: { bankName: string; accountNumber: string; accountName: string } | null;
   rating: number | null;
@@ -44,7 +43,7 @@ export function ProfileView({
       <section className="flex flex-col items-center pt-4 text-center">
         <Avatar name={name} size={84} />
         <h1 className="mt-4 font-display text-[26px] font-bold text-ink">{name}</h1>
-        <p className="tnum text-[14px] text-muted">{formatPhoneLocal(phone)}</p>
+        <p className="text-[14px] text-muted">{email}</p>
         <div className="mt-4 flex gap-2">
           {tag ? <span className="rounded-full bg-hero px-3 py-1.5 text-[12.5px] font-semibold text-hero-ink">Bag {tag}</span> : null}
           <span className="inline-flex items-center gap-1 rounded-full bg-sunken px-3 py-1.5 text-[12.5px] font-semibold text-ink-2">

@@ -54,7 +54,7 @@ export async function notify(userIds: string | string[], msg: Message): Promise<
     }
     if (msg.sms) {
       const rows = await db.select({ phone: users.phone }).from(users).where(inArray(users.id, ids));
-      for (const r of rows) jobs.push(sendSms(r.phone, msg.sms));
+      for (const r of rows) if (r.phone) jobs.push(sendSms(r.phone, msg.sms));
     }
     await Promise.allSettled(jobs);
   } catch (err) {

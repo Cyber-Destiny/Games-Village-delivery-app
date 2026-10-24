@@ -19,7 +19,6 @@ import type { AdminVendor } from "@/lib/admin";
 import { CATEGORIES, getCategory } from "@/lib/categories";
 import { cn } from "@/lib/cn";
 import { naira } from "@/lib/money";
-import { formatPhoneLocal } from "@/lib/phone";
 import { uploadPhoto } from "@/lib/upload-client";
 import { deleteItem, saveItem, saveVendor } from "../actions";
 
@@ -36,10 +35,10 @@ type Details = {
   isActive: boolean;
 };
 
-type ContactRow = { key: number; label: string; phone: string };
+type ContactRow = { key: number; label: string; email: string };
 
 let contactKey = 0;
-const contactRow = (label = "", phone = ""): ContactRow => ({ key: ++contactKey, label, phone });
+const contactRow = (label = "", email = ""): ContactRow => ({ key: ++contactKey, label, email });
 
 const blank = (): Details => ({
   id: null,
@@ -74,7 +73,7 @@ export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
             description: v.description ?? "",
             location: v.location ?? "",
             contacts: v.contacts.length
-              ? v.contacts.map((c) => contactRow(c.label ?? "", formatPhoneLocal(c.phone).replace(/\s/g, "")))
+              ? v.contacts.map((c) => contactRow(c.label ?? "", c.email))
               : [contactRow()],
             image: v.image,
             hours: v.hours ?? "",
@@ -200,7 +199,7 @@ export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
                       start(async () => {
                         const res = await saveVendor({
                           ...editing,
-                          contacts: editing.contacts.map(({ label, phone }) => ({ label, phone })),
+                          contacts: editing.contacts.map(({ label, email }) => ({ label, email })),
                           bank: bank.accountName ? { bankCode: bank.bankCode, bankName: bank.bankName, accountNumber: bank.accountNumber } : null,
                         });
                         if (!res.ok) return toast.error(res.error);
@@ -289,7 +288,7 @@ function ContactsEditor({ rows, onChange }: { rows: ContactRow[]; onChange: (row
         <div>
           <p className="text-[14px] font-semibold text-ink">Shop staff on chat</p>
           <p className="text-[12.5px] text-muted">
-            Each person signs in with their number to reply to customers. Residents never see these numbers.
+            Each person signs in with their email to reply to customers. Residents never see it.
           </p>
         </div>
         <MessageCircle className="mt-0.5 size-4 shrink-0 text-faint" />
@@ -305,11 +304,11 @@ function ContactsEditor({ rows, onChange }: { rows: ContactRow[]; onChange: (row
               exit={{ opacity: 0, height: 0 }}
               className="grid grid-cols-[1fr_1fr_auto] gap-2"
             >
-              <Input aria-label="Phone number" placeholder="0803 123 4567" inputMode="tel" value={r.phone} onChange={(e) => update(r.key, { phone: e.target.value })} />
+              <Input aria-label="Email" placeholder="staff@example.com" type="email" inputMode="email" autoCapitalize="none" value={r.email} onChange={(e) => update(r.key, { email: e.target.value })} />
               <Input aria-label="Name" placeholder="Name, e.g. Chika" value={r.label} onChange={(e) => update(r.key, { label: e.target.value })} />
               <button
                 type="button"
-                title="Remove number"
+                title="Remove person"
                 onClick={() => onChange(rows.length > 1 ? rows.filter((x) => x.key !== r.key) : [contactRow()])}
                 className="grid size-[52px] place-items-center rounded-2xl text-faint hover:bg-danger-soft hover:text-danger"
               >
