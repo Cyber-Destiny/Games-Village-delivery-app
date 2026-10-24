@@ -53,8 +53,8 @@ export async function arrived(orderId: string) {
   return attempt(async () => markArrived(await runner(), orderId));
 }
 
-export async function complete(orderId: string, code: string) {
-  return attempt(async () => completeDelivery(await runner(), orderId, code));
+export async function complete(orderId: string, code: string, photoId: string | null) {
+  return attempt(async () => completeDelivery(await runner(), orderId, code, photoId));
 }
 
 export async function saveBank(input: { bankCode: string; bankName: string; accountNumber: string }) {

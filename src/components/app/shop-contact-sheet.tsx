@@ -60,7 +60,7 @@ function Body({ shop, showMenuLink }: { shop: Shop; showMenuLink: boolean }) {
       <div className="mt-5 space-y-2">
         <ShopChatButton shop={shop} />
         <LinkButton href={`/collect?vendor=${shop.id}`} size="lg" block variant={shop.chat ? "secondary" : "primary"}>
-          <Bike className="size-[18px]" /> Paid &amp; packed? Send a rider
+          <Bike className="size-[18px]" /> Paid the shop? Send a rider
         </LinkButton>
         {showMenuLink ? (
           <Link

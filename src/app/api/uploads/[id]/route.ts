@@ -20,7 +20,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const linked = await db
       .select({ residentId: orders.residentId, runnerId: orders.runnerId })
       .from(orders)
-      .where(or(eq(orders.photoId, id), eq(orders.receiptId, id)));
+      .where(or(eq(orders.photoId, id), eq(orders.receiptId, id), eq(orders.deliveryPhotoId, id)));
     allowed = linked.some((o) => o.residentId === user.id || o.runnerId === user.id);
   }
   if (!allowed) return new Response("Not found", { status: 404 });

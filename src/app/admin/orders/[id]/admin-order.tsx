@@ -142,9 +142,10 @@ export function AdminOrder({ initial, runners }: { initial: OrderView; runners: 
                 <span className="tnum font-display text-[18px] font-bold tracking-[0.3em] text-ink">{o.deliveryCode}</span>
               </div>
             ) : null}
-            {o.receiptUrl ? (
-              <div className="mt-4">
-                <Photo url={o.receiptUrl} label="Receipt" />
+            {o.receiptUrl || o.deliveryPhotoUrl ? (
+              <div className="mt-4 flex flex-wrap gap-3">
+                {o.receiptUrl ? <Photo url={o.receiptUrl} label="Receipt" /> : null}
+                {o.deliveryPhotoUrl ? <Photo url={o.deliveryPhotoUrl} label="Proof of delivery" /> : null}
               </div>
             ) : null}
           </Panel>

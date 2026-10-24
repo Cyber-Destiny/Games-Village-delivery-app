@@ -562,6 +562,7 @@ export function NewErrand(props: Props) {
                       ? "The most your runner can spend on the items. You only pay what things actually cost."
                       : "What the runner should pay when collecting."}
                   </p>
+                  {kind === "buy" ? <PriceHelp shop={shop} shops={categoryShops} /> : null}
                   <MoneyInput
                     size="lg"
                     className="mt-5"
@@ -837,6 +838,39 @@ function Row({ label, value, hint }: { label: string; value: React.ReactNode; hi
         {hint ? <p className="text-[12px] text-muted">{hint}</p> : null}
       </div>
       <div className="tnum text-[14.5px] font-medium text-ink">{value}</div>
+    </div>
+  );
+}
+
+/** "Don't know the price?" — point people to the shop's chat, or to sending a rider if they've paid already. */
+function PriceHelp({ shop, shops }: { shop: Shop | null; shops: Shop[] }) {
+  const onChat = shop ? (shop.chat ? [shop] : []) : shops.filter((s) => s.chat).slice(0, 4);
+  if (!onChat.length && !shop) return null;
+  return (
+    <div className="mt-4 overflow-hidden rounded-[18px] border border-line bg-surface">
+      {onChat.length ? (
+        <div className="px-4 py-3">
+          <p className="flex items-center gap-2 text-[14px] font-semibold text-ink">
+            <MessageCircle className="size-4 text-primary" /> Don&apos;t know the price?
+          </p>
+          <p className="mt-0.5 text-[13px] leading-snug text-muted">Ask the shop what&apos;s in stock and how much, then pay them and send a rider.</p>
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            {onChat.map((s) => (
+              <Link key={s.id} href={`/chat/${s.id}`} className="inline-flex h-9 items-center gap-2 rounded-full bg-primary-soft pl-1 pr-3.5 text-[13px] font-semibold text-primary-soft-ink">
+                <span className="relative block size-7 overflow-hidden rounded-full bg-sunken">
+                  <Photo src={shopPhoto(s)} sizes="56px" />
+                </span>
+                Chat with {s.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {shop ? (
+        <Link href={`/collect?vendor=${shop.id}`} className="flex items-center justify-between gap-2 border-t border-line px-4 py-3 text-[13.5px] font-semibold text-primary first:border-t-0">
+          Already paid {shop.name}? Send a rider <ArrowRight className="size-4" />
+        </Link>
+      ) : null}
     </div>
   );
 }

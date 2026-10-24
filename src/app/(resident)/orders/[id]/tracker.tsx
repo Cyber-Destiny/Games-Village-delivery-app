@@ -367,9 +367,10 @@ export function Tracker({ initial }: { initial: OrderView }) {
             ) : null}
           </div>
           <MoneyBreakdown order={order} perspective="resident" />
-          {order.receiptUrl ? (
-            <div className="mt-4 border-t border-line pt-4">
-              <Photo url={order.receiptUrl} label="Receipt" />
+          {order.receiptUrl || order.deliveryPhotoUrl ? (
+            <div className="mt-4 flex flex-wrap gap-3 border-t border-line pt-4">
+              {order.receiptUrl ? <Photo url={order.receiptUrl} label="Receipt" /> : null}
+              {order.deliveryPhotoUrl ? <Photo url={order.deliveryPhotoUrl} label="Proof of delivery" /> : null}
             </div>
           ) : null}
         </div>

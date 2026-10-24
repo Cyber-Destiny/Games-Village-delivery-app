@@ -214,6 +214,8 @@ export const orders = pgTable(
     changeRefunded: integer("change_refunded"),
     receiptId: uuid("receipt_id"),
     deliveryCode: text("delivery_code").notNull(),
+    // Photo the runner takes at the door when handing over (proof of delivery).
+    deliveryPhotoId: uuid("delivery_photo_id"),
     declinedRunnerIds: jsonb("declined_runner_ids").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
     loyaltyFree: boolean("loyalty_free").notNull().default(false),
     rating: smallint("rating"),

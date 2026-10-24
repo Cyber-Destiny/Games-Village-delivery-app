@@ -89,6 +89,7 @@ async function buildOrderView(order: Order, viewer: Viewer) {
     notes: order.notes,
     photoUrl: order.photoId ? `/api/uploads/${order.photoId}` : null,
     receiptUrl: order.receiptId ? `/api/uploads/${order.receiptId}` : null,
+    deliveryPhotoUrl: order.deliveryPhotoId ? `/api/uploads/${order.deliveryPhotoId}` : null,
     drop: { block: order.dropBlock, house: order.dropHouse, street: order.dropStreet, landmark: order.dropLandmark },
     money: {
       budget: order.budget,

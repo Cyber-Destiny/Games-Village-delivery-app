@@ -1,13 +1,12 @@
 "use client";
 
-import { Bike, ChevronLeft } from "lucide-react";
+import { ArrowRight, Bike, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CallButton } from "@/components/call/call-provider";
 import { ChatView } from "@/components/chat/chat-view";
 import { OffPlatformNote } from "@/components/legal/notes";
 import { Photo, shopPhoto } from "@/components/brand/photo";
-import { LinkButton } from "@/components/ui/button";
 import { APP_NAME } from "@/lib/brand";
 import type { residentChat } from "@/lib/shop-chat";
 
@@ -26,26 +25,37 @@ export function ShopChat({ vendorId, initial }: { vendorId: string; initial: Dat
       quickReplies={initial.messages.length < 6 ? QUICK : []}
       placeholder={`Message ${shop.name}`}
       header={() => (
-        <div className="flex h-16 items-center gap-3 px-3">
-          <button onClick={() => (history.length > 1 ? router.back() : router.push("/home"))} aria-label="Back" className="grid size-10 place-items-center rounded-full hover:bg-sunken">
-            <ChevronLeft className="size-6" strokeWidth={2.2} />
-          </button>
-          <Link href={`/shops/${shop.id}`} className="flex min-w-0 flex-1 items-center gap-3">
-            <span className="relative block size-10 shrink-0 overflow-hidden rounded-full bg-sunken">
-              <Photo src={shopPhoto(shop)} sizes="80px" />
+        <>
+          <div className="flex h-16 items-center gap-3 px-3">
+            <button onClick={() => (history.length > 1 ? router.back() : router.push("/home"))} aria-label="Back" className="grid size-10 place-items-center rounded-full hover:bg-sunken">
+              <ChevronLeft className="size-6" strokeWidth={2.2} />
+            </button>
+            <Link href={`/shops/${shop.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+              <span className="relative block size-10 shrink-0 overflow-hidden rounded-full bg-sunken">
+                <Photo src={shopPhoto(shop)} sizes="80px" />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-[15.5px] font-semibold text-ink">{shop.name}</span>
+                <span className="block truncate text-[12px] text-muted">{shop.hours ? `Open ${shop.hours}` : shop.location ?? "Shop"}</span>
+              </span>
+            </Link>
+            {initial.online ? (
+              <CallButton target={{ vendorId: shop.id }} peer={{ name: shop.name, subtitle: "Shop", image: shop.image, category: shop.category }} />
+            ) : null}
+          </div>
+          <Link
+            href={`/collect?vendor=${shop.id}`}
+            className="flex items-center gap-3 border-t border-line/70 bg-primary-soft/70 px-4 py-2.5 text-[13px] leading-snug text-primary-soft-ink"
+          >
+            <Bike className="size-[18px] shrink-0" />
+            <span className="min-w-0 flex-1">
+              <span className="font-semibold">Paid {shop.name}?</span> Pay the delivery fee and a rider picks it up.
             </span>
-            <span className="min-w-0">
-              <span className="block truncate text-[15.5px] font-semibold text-ink">{shop.name}</span>
-              <span className="block truncate text-[12px] text-muted">{shop.hours ? `Open ${shop.hours}` : shop.location ?? "Shop"}</span>
+            <span className="flex shrink-0 items-center gap-1 font-semibold">
+              Send rider <ArrowRight className="size-4" />
             </span>
           </Link>
-          {initial.online ? (
-            <CallButton target={{ vendorId: shop.id }} peer={{ name: shop.name, subtitle: "Shop", image: shop.image, category: shop.category }} />
-          ) : null}
-          <LinkButton href={`/collect?vendor=${shop.id}`} size="sm" variant="soft" className="shrink-0 rounded-full">
-            <Bike className="size-4" /> Rider
-          </LinkButton>
-        </div>
+        </>
       )}
       intro={(d) =>
         d.messages.length === 0 ? (

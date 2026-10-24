@@ -169,9 +169,9 @@ export function JobFlow({ initial, commissionPct }: { initial: OrderView; commis
           {o.status === "arrived" ? (
             <CodeEntry
               pending={pending}
-              onSubmit={(code) =>
+              onSubmit={(code, photoId) =>
                 start(async () => {
-                  const res = await complete(o.id, code);
+                  const res = await complete(o.id, code, photoId);
                   if (!res.ok) {
                     toast.error(res.error);
                     haptic([30, 50, 30]);
@@ -585,11 +585,13 @@ function DropOff({ o }: { o: OrderView }) {
   );
 }
 
-function CodeEntry({ onSubmit, pending }: { onSubmit: (code: string) => void; pending: boolean }) {
+function CodeEntry({ onSubmit, pending }: { onSubmit: (code: string, photoId: string) => void; pending: boolean }) {
   const [code, setCode] = useState("");
+  const [photo, setPhoto] = useState<{ id: string; url: string } | null>(null);
   useEffect(() => {
     if (!pending) setCode((c) => (c.length === 4 ? "" : c));
   }, [pending]);
+  const ready = code.length === 4 && !!photo;
   return (
     <div className="card p-5">
       <div className="flex items-center gap-3">
@@ -597,16 +599,22 @@ function CodeEntry({ onSubmit, pending }: { onSubmit: (code: string) => void; pe
           <KeyRound className="size-5" />
         </span>
         <div>
-          <p className="font-display text-[17px] font-semibold text-ink">Ask for the delivery code</p>
-          <p className="text-[13px] text-muted">Only after they&apos;ve checked everything.</p>
+          <p className="font-display text-[17px] font-semibold text-ink">Hand over and confirm</p>
+          <p className="text-[13px] text-muted">Ask for their code once they&apos;ve checked everything, then take a photo.</p>
         </div>
       </div>
       <div className="mx-auto mt-5 max-w-[280px]">
-        <OtpInput length={4} value={code} onChange={setCode} onComplete={onSubmit} disabled={pending} autoFocus={false} />
+        <p className="mb-2 text-center text-[13px] font-semibold text-ink-2">1. Their 4-digit delivery code</p>
+        <OtpInput length={4} value={code} onChange={setCode} disabled={pending} autoFocus={false} />
       </div>
-      <Button size="xl" block className="mt-5" loading={pending} disabled={code.length !== 4} onClick={() => onSubmit(code)}>
-        Complete errand
+      <div className="mt-5 border-t border-line pt-4">
+        <p className="mb-2 text-[13px] font-semibold text-ink-2">2. Proof of delivery</p>
+        <PhotoPicker value={photo} onChange={setPhoto} label="Photo of the handover" hint="The items at their door, or in their hands" />
+      </div>
+      <Button size="xl" block className="mt-5" loading={pending} disabled={!ready} onClick={() => photo && onSubmit(code, photo.id)}>
+        Mark delivered
       </Button>
+      {!ready ? <p className="mt-2 text-center text-[12.5px] text-muted">{code.length !== 4 ? "Enter the code first." : "Take the photo to finish."}</p> : null}
     </div>
   );
 }

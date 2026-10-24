@@ -72,7 +72,7 @@ export function ShopView({ shop }: { shop: Shop }) {
           </>
         ) : null}
         <LinkButton href={`/collect?vendor=${shop.id}`} size="lg" block variant={shop.chat ? "secondary" : "primary"} className={shop.chat ? "mt-2" : "mt-7"}>
-          <Bike className="size-[18px]" /> Paid &amp; packed? Send a rider
+          <Bike className="size-[18px]" /> Paid the shop? Send a rider
         </LinkButton>
       </motion.section>
 

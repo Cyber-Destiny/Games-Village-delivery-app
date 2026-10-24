@@ -10,6 +10,7 @@ import {
   runnerEarnings,
   runnerProfiles,
   topups,
+  uploads,
   users,
   vendors,
   type Order,
@@ -857,8 +858,11 @@ async function finishDelivery(tx: Tx, order: Order, actorId: string, how: string
   return change;
 }
 
-export async function completeDelivery(runner: User, orderId: string, code: string) {
+export async function completeDelivery(runner: User, orderId: string, code: string, photoId: string | null) {
   const clean = code.replace(/\D/g, "");
+  if (!photoId || !/^[0-9a-f-]{36}$/i.test(photoId)) throw new UserError("Take a photo of the handover first.");
+  const [photo] = await db.select({ ownerId: uploads.ownerId }).from(uploads).where(eq(uploads.id, photoId));
+  if (!photo || photo.ownerId !== runner.id) throw new UserError("Take a photo of the handover first.");
   const res = await db.transaction(async (tx) => {
     const o = await lockRunnerOrder(tx, runner, orderId, ["on_the_way", "arrived"]);
     const [fails] = await tx
@@ -872,7 +876,8 @@ export async function completeDelivery(runner: User, orderId: string, code: stri
       await addEvent(tx, o.id, "code_failed", "Wrong delivery code entered", runner.id);
       return { ok: false as const, left: MAX_CODE_ATTEMPTS - (fails?.n ?? 0) - 1 };
     }
-    const change = await finishDelivery(tx, o, runner.id, "Delivered — code confirmed");
+    await tx.update(orders).set({ deliveryPhotoId: photoId }).where(eq(orders.id, o.id));
+    const change = await finishDelivery(tx, o, runner.id, "Delivered — code confirmed, photo taken");
     return { ok: true as const, order: o, change };
   });
 
