@@ -49,12 +49,25 @@ export function timeAgo(date: Date | string | null | undefined, now: Date = new 
 
 export function formatTime(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date;
-  return d.toLocaleTimeString("en-NG", { hour: "numeric", minute: "2-digit", timeZone: TZ });
+  return d.toLocaleTimeString("en-NG", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: TZ }).toLowerCase();
 }
 
 export function formatDate(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date;
   return d.toLocaleDateString("en-NG", { day: "numeric", month: "short", timeZone: TZ });
+}
+
+/** "07:00" → "7am", "21:30" → "9:30pm" */
+export function to12h(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const suffix = h >= 12 ? "pm" : "am";
+  const hr = h % 12 || 12;
+  return m ? `${hr}:${String(m).padStart(2, "0")}${suffix}` : `${hr}${suffix}`;
+}
+
+/** Opening hours for people to read, e.g. "7am–11pm". */
+export function formatHours(open: string, close: string): string {
+  return open === close ? "24 hours" : `${to12h(open)}–${to12h(close)}`;
 }
 
 export function formatDateTime(date: Date | string): string {

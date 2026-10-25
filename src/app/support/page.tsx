@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { homeFor, requireUser } from "@/lib/auth/dal";
+import { formatHours } from "@/lib/time";
 import { getSettings } from "@/lib/settings";
 import { supportChat } from "@/lib/support";
 import { SupportChat } from "./support-chat";
@@ -19,7 +20,7 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
         home={homeFor(user)}
         audience={user.role === "runner" ? "runner" : user.role === "vendor" ? "shop" : "resident"}
         phone={s.supportPhone}
-        hours={`${s.openTime}–${s.closeTime}`}
+        hours={formatHours(s.openTime, s.closeTime)}
         draft={code ? `About errand #${code}: ` : ""}
       />
     </div>

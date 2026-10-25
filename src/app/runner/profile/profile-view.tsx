@@ -39,7 +39,7 @@ export function ProfileView({
   const [pending, start] = useTransition();
 
   return (
-    <main className="safe-top px-5 pb-36 pt-4">
+    <main className="safe-pt-4 px-5 pb-36">
       <section className="flex flex-col items-center pt-4 text-center">
         <Avatar name={name} size={84} />
         <h1 className="mt-4 font-display text-[26px] font-bold text-ink">{name}</h1>
@@ -73,7 +73,7 @@ export function ProfileView({
       <section className="mt-4 rounded-[22px] border border-line bg-surface p-4">
         <p className="text-[15px] font-semibold text-ink">Keep every job in the app</p>
         <ul className="mt-2 space-y-1.5 text-[13.5px] leading-relaxed text-ink-2">
-          <li>Never take cash or transfers from residents. Shops are paid by the app.</li>
+          <li>Never take cash or transfers from residents. Your fee is paid through the app.</li>
           <li>Don&apos;t accept private bookings, or give out your number for errands.</li>
           <li>Hand items over only when the resident gives you their delivery code.</li>
         </ul>

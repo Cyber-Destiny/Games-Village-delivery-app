@@ -285,7 +285,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             role="dialog"
             aria-label={`Call with ${peer.name}`}
           >
-            <div className="safe-top flex w-full max-w-sm flex-1 flex-col items-center justify-center pb-10 pt-16 text-center">
+            <div className="safe-pt-16 flex w-full max-w-sm flex-1 flex-col items-center justify-center pb-10 text-center">
               <div className="relative grid place-items-center">
                 {phase === "outgoing" || phase === "incoming" ? (
                   <>
@@ -317,7 +317,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
               <p className="tnum mt-2 text-[15px] text-white/75">{status}</p>
             </div>
 
-            <div className="safe-bottom w-full max-w-sm pb-10">
+            <div className="safe-pb-10 w-full max-w-sm">
               {phase === "incoming" ? (
                 <div className="flex items-center justify-around">
                   <RoundButton label="Decline" onClick={decline} className="bg-[#e5484d]">

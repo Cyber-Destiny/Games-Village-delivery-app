@@ -75,7 +75,7 @@ export function SupportChat({
             <LogoMark size={72} className="mx-auto" />
             <p className="mt-4 font-display text-[20px] font-semibold text-ink">How can we help?</p>
             <p className="mt-1.5 text-[14px] leading-relaxed text-muted">
-              Chat with the {APP_NAME} team here. We reply between {hours}, usually within a few minutes.
+              Chat with the {APP_NAME} team here. We&apos;re online {hours} and usually reply within a few minutes.
             </p>
             {phone ? (
               <p className="mt-3 text-[13px] leading-relaxed text-muted">

@@ -7,6 +7,7 @@ import { UserError } from "./errors";
 import { notify } from "./notify";
 import { formatPhoneLocal } from "./phone";
 import { getSettings, isOpenNow } from "./settings";
+import { formatHours } from "./time";
 import { shortName } from "./shop-chat";
 
 // In-app chat with the support team. Every resident, runner and shop staff member has
@@ -107,7 +108,7 @@ export async function supportSend(user: User, body: string) {
       "system",
       isOpenNow({ ...s, serviceOpen: true })
         ? `Thanks, we've got your message. Someone from the team will reply here shortly.${phone}`
-        : `Thanks, we've got your message. We're open ${s.openTime}–${s.closeTime} and will reply here as soon as we're back.${phone}`,
+        : `Thanks, we've got your message. We're open ${formatHours(s.openTime, s.closeTime)} and will reply here as soon as we're back.${phone}`,
       null,
     );
   }

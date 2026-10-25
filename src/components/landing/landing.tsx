@@ -9,6 +9,7 @@ import { Logo } from "@/components/brand/logo";
 import { LinkButton } from "@/components/ui/button";
 import { APP_NAME, ESTATE_NAME } from "@/lib/brand";
 import { CATEGORIES } from "@/lib/categories";
+import { cn } from "@/lib/cn";
 import { telLink, whatsappLink } from "@/lib/contact";
 import { formatPhoneLocal } from "@/lib/phone";
 import { PHOTOS } from "@/lib/photos";
@@ -123,12 +124,13 @@ function Faq(props: Props) {
 }
 
 export function Landing(props: Props) {
+  const tiles = CATEGORIES.filter((c) => props.runnerBuys || c.id !== "other");
   const { signedIn, appHref, loyaltyEvery, supportPhone } = props;
   const cta = signedIn ? appHref : "/login";
 
   return (
     <div className="overflow-x-clip">
-      <header className="safe-top mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
+      <header className="safe-pt-4 mx-auto flex max-w-6xl items-center justify-between px-5 pb-4 sm:px-8">
         <Logo />
         <LinkButton href={cta} variant="secondary" size="sm">
           {signedIn ? "Open app" : "Sign in"}
@@ -155,7 +157,9 @@ export function Landing(props: Props) {
             transition={{ duration: 0.7, ease, delay: 0.15 }}
             className="mt-5 max-w-[32rem] text-[17px] leading-relaxed text-ink-2 sm:text-[19px]"
           >
-            Order from the shops you already know, or tell us what you need. A vetted runner from the estate brings it to your door.
+            {props.runnerBuys
+              ? "Order from the shops you already know, or tell us what you need. A vetted runner from the estate brings it to your door."
+              : "Chat with the shops you already know and order in the app. A vetted runner from the estate brings it to your door."}
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 14 }}
@@ -207,12 +211,18 @@ export function Landing(props: Props) {
             The little errands that eat your day.
           </h2>
         </Reveal>
-        <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-7 lg:grid-cols-3">
-          {CATEGORIES.map((c, i) => (
-            <Reveal key={c.id} delay={i * 0.04}>
+        {/* With an odd number of tiles, the first spans the row on phones and they all share one row on desktop. */}
+        <div className={cn("mt-8 grid grid-cols-2 gap-x-4 gap-y-7", tiles.length % 2 ? "lg:grid-cols-5" : "lg:grid-cols-3")}>
+          {tiles.map((c, i) => (
+            <Reveal key={c.id} delay={i * 0.04} className={cn(tiles.length % 2 && i === 0 && "col-span-2 lg:col-span-1")}>
               <div className="group">
-                <div className="relative aspect-[4/3] overflow-hidden rounded-[20px] bg-sunken">
-                  <Photo src={categoryPhoto(c.id)} alt="" sizes="(min-width: 1024px) 360px, 50vw" className="transition-transform duration-700 group-hover:scale-[1.04]" />
+                <div className={cn("relative overflow-hidden rounded-[20px] bg-sunken", tiles.length % 2 && i === 0 ? "aspect-[2/1] lg:aspect-[4/3]" : "aspect-[4/3]")}>
+                  <Photo
+                    src={categoryPhoto(c.id)}
+                    alt=""
+                    sizes={tiles.length % 2 && i === 0 ? "(min-width: 1024px) 240px, 100vw" : "(min-width: 1024px) 360px, 50vw"}
+                    className="transition-transform duration-700 group-hover:scale-[1.04]"
+                  />
                 </div>
                 <h3 className="mt-3 font-display text-[18px] font-semibold text-ink sm:text-[20px]">{c.label}</h3>
                 <p className="mt-0.5 text-[13.5px] leading-snug text-muted sm:text-[15px]">{c.blurb}</p>
@@ -242,7 +252,7 @@ export function Landing(props: Props) {
       </section>
 
       {/* PROMISE */}
-      <section className="mx-auto max-w-6xl px-5 py-14 sm:px-8">
+      <section id="promise" className="mx-auto max-w-6xl scroll-mt-10 px-5 py-14 sm:px-8">
         <Reveal>
           <div className="rounded-[28px] bg-hero px-6 py-12 text-hero-ink sm:px-12 sm:py-14">
             <div className="grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:items-center">
@@ -255,7 +265,9 @@ export function Landing(props: Props) {
               <ul className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
                 {[
                   { icon: ShieldCheck, t: "Covered errands", d: "If something goes wrong, we sort it out." },
-                  { icon: Wallet, t: "Change to your wallet", d: "When a runner buys for you, the rest comes back." },
+                  props.runnerBuys
+                    ? { icon: Wallet, t: "Change to your wallet", d: "When a runner buys for you, the rest comes back." }
+                    : { icon: Wallet, t: "Refunds to your wallet", d: "Cancel before pickup and your fee comes straight back." },
                   { icon: BadgeCheck, t: "Vetted runners", d: "NIN-checked, with a guarantor." },
                   { icon: Package, t: "Delivery code", d: "Nothing is complete until you say so." },
                 ].map(({ icon: Icon, t, d }) => (

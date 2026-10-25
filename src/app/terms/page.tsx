@@ -37,15 +37,15 @@ export default async function TermsPage() {
       title: "What Runam does",
       body: (
         <>
-          <p>{APP_NAME} helps residents of {SERVICE_AREA} get errands done inside the estate. There are two ways to use it:</p>
+          <p>{APP_NAME} helps residents of {SERVICE_AREA} get errands done inside the estate. Depending on what the app offers at the time, you can:</p>
           <ul>
             <li>
               <strong>Order from a shop yourself.</strong> You chat with or call a shop in the app, agree what you want and pay the shop directly. When your order is ready,
               you book a runner in the app to collect it and bring it to you.
             </li>
             <li>
-              <strong>Let a runner buy it for you.</strong> You tell us what you need and set a budget. The runner buys it, we pay the shop from your budget, and the
-              runner delivers it.
+              <strong>Let a runner buy it for you</strong> (when this option is shown in the app). You tell us what you need and set a budget. The runner buys it, we pay
+              the shop from your budget, and the runner delivers it.
             </li>
           </ul>
           <p>
@@ -208,7 +208,7 @@ export default async function TermsPage() {
       body: (
         <ul>
           <li>Only accept and run errands through the app. Never ask a resident for cash, a transfer to your own account, or private bookings.</li>
-          <li>Keep receipts and confirm what you paid in the app. Shops are paid by {APP_NAME}, not by you.</li>
+          <li>When you buy for a resident, keep the receipt and confirm what you paid in the app. Shops are paid by {APP_NAME}, not by you.</li>
           <li>Hand items over only after the resident gives you their delivery code.</li>
           <li>Your earnings are your share of the service fee plus any bonus shown in the app, paid to the bank account you gave us.</li>
           <li>Breaking these rules, including taking jobs outside the app, can lead to your account being removed and unpaid earnings being withheld where the law allows.</li>
@@ -223,7 +223,7 @@ export default async function TermsPage() {
           <li>Keep your prices, stock and hours accurate, and only take orders you can fulfil.</li>
           <li>You are responsible for the goods you sell, including their quality, safety, labelling and any licences they need.</li>
           <li>Hand orders only to the runner booked in the app, and only for the name shown in your chat.</li>
-          <li>Each staff member signs in with their own number. Tell us when someone leaves so we can remove their access.</li>
+          <li>Each staff member signs in with their own email address. Tell us when someone leaves so we can remove their access.</li>
           <li>Payouts for errands where a runner buys from you are sent to the bank account you gave us.</li>
         </ul>
       ),

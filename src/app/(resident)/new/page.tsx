@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { orders } from "@/lib/db/schema";
 import { paidOrderCount } from "@/lib/orders/service";
 import { getShops } from "@/lib/resident";
+import { formatHours } from "@/lib/time";
 import { getSettings, isOpenNow } from "@/lib/settings";
 import { NewErrand, type Prefill } from "./new-errand";
 
@@ -77,7 +78,7 @@ export default async function NewErrandPage({
       maxBudget={s.maxBudget}
       walletBalance={user.walletBalance}
       open={isOpenNow(s)}
-      hours={`${s.openTime}–${s.closeTime}`}
+      hours={formatHours(s.openTime, s.closeTime)}
       address={{ block: user.block ?? "", house: user.house ?? "", street: user.street ?? "", landmark: user.landmark ?? "" }}
     />
   );

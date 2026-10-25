@@ -22,7 +22,7 @@ export function ShopChat({ vendorId, initial }: { vendorId: string; initial: Dat
       side="resident"
       endpoint={`/api/shop-chat/${vendorId}`}
       initial={initial}
-      quickReplies={initial.messages.length < 6 ? QUICK : []}
+      quickReplies={(d) => (d.messages.some((m) => m.mine) ? [] : QUICK)}
       placeholder={`Message ${shop.name}`}
       header={() => (
         <>

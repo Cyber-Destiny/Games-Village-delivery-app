@@ -60,8 +60,8 @@ export function AdminOrder({ initial, runners }: { initial: OrderView; runners: 
           <div>
             <h1 className="font-display text-[30px] font-bold leading-tight text-ink">#{o.code}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-[13.5px] text-muted">
-              <StatusBadge status={o.status} />
-              <span>{getCategory(o.category).label}</span>
+              <StatusBadge status={o.status} label={o.awaitingShop ? "Waiting for shop" : undefined} />
+              <span>{o.collectAs ? "Collect a paid order" : getCategory(o.category).label}</span>
               <span>· {formatDateTime(o.at.created)}</span>
             </div>
           </div>
@@ -103,8 +103,8 @@ export function AdminOrder({ initial, runners }: { initial: OrderView; runners: 
         <div className="space-y-6">
           <Panel title="What they asked for" bodyClass="p-5">
             <p className="mb-4 text-[14px] text-ink-2">
-              {o.kind === "pickup" ? `Pick up from ${o.pickupFrom ?? "—"}` : `From ${o.vendorName ?? "any shop"}`}
-              {o.vendorIsPartner ? <Badge tone="brand" className="ml-2">Partner</Badge> : null}
+              {o.kind === "pickup" ? `Pick up from ${o.pickupFrom ?? o.vendorName ?? "—"}` : `From ${o.vendorName ?? "any shop"}`}
+              {o.vendorIsPartner && o.kind === "buy" ? <Badge tone="brand" className="ml-2">Partner</Badge> : null}
             </p>
             <ItemsList order={o} />
             <div className="mt-4 border-t border-line pt-4 text-[14px] text-ink-2">
@@ -115,7 +115,7 @@ export function AdminOrder({ initial, runners }: { initial: OrderView; runners: 
           </Panel>
 
           <Panel title="Activity" bodyClass="p-5">
-            <Timeline events={o.events} defaultOpen />
+            <Timeline events={o.events} collapsible={false} />
           </Panel>
         </div>
 

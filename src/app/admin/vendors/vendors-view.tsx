@@ -53,7 +53,7 @@ const blank = (): Details => ({
   isActive: true,
 });
 
-export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
+export function VendorsView({ vendors, runnerBuys }: { vendors: AdminVendor[]; runnerBuys: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState<Details | null>(null);
   const [tab, setTab] = useState<"details" | "items">("details");
@@ -89,7 +89,7 @@ export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
     <>
       <AdminHeader
         title="Shops"
-        description="Partner shops get paid automatically when a runner confirms a purchase."
+        description={runnerBuys ? "Partner shops get paid automatically when a runner confirms a purchase." : "The shops residents chat with and send riders to."}
         actions={
           <Button onClick={() => open()}>
             <Plus className="size-4" /> Add shop
@@ -112,7 +112,7 @@ export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
                 <Photo src={shopPhoto(v)} sizes="(min-width: 1280px) 400px, (min-width: 640px) 50vw, 100vw" />
                 <div className="relative flex gap-1.5">
                   {!v.isActive ? <Badge tone="danger">Hidden</Badge> : null}
-                  {v.isPartner && v.accountNumber ? (
+                  {!runnerBuys ? null : v.isPartner && v.accountNumber ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-surface/90 px-2 py-1 text-[11px] font-semibold text-primary-soft-ink backdrop-blur">
                       <BadgeCheck className="size-3" /> Partner
                     </span>
@@ -129,7 +129,7 @@ export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
                 <div className="mt-4 grid grid-cols-3 gap-2 text-center">
                   <Mini label="Items" value={String(v.items.length)} />
                   <Mini label="Errands · 30d" value={String(v.orders30)} />
-                  <Mini label="Paid · 30d" value={naira(v.spend30)} />
+                  {runnerBuys ? <Mini label="Paid · 30d" value={naira(v.spend30)} /> : <Mini label="On chat" value={String(v.contacts.length)} />}
                 </div>
               </div>
             </motion.button>
@@ -181,14 +181,18 @@ export function VendorsView({ vendors }: { vendors: AdminVendor[] }) {
                     onChange={(image) => setEditing({ ...editing, image })}
                   />
                   <ContactsEditor rows={editing.contacts} onChange={(contacts) => setEditing({ ...editing, contacts })} />
-                  <div className="rounded-2xl bg-surface-2 p-4 sm:col-span-2">
-                    <p className="mb-1 text-[14px] font-semibold text-ink">Bank account for payments</p>
-                    <p className="mb-3 text-[12.5px] text-muted">
-                      {current?.accountNumber ? `Currently ${current.accountName} · ${current.bankName}. Fill in to change.` : "Required for automatic payments."}
-                    </p>
-                    <BankFields value={bank} onChange={setBank} />
-                  </div>
-                  <Toggle label="Partner shop" sub="Pay automatically when the runner confirms" checked={editing.isPartner} onChange={(v) => setEditing({ ...editing, isPartner: v })} />
+                  {runnerBuys ? (
+                    <>
+                      <div className="rounded-2xl bg-surface-2 p-4 sm:col-span-2">
+                        <p className="mb-1 text-[14px] font-semibold text-ink">Bank account for payments</p>
+                        <p className="mb-3 text-[12.5px] text-muted">
+                          {current?.accountNumber ? `Currently ${current.accountName} · ${current.bankName}. Fill in to change.` : "Required for automatic payments."}
+                        </p>
+                        <BankFields value={bank} onChange={setBank} />
+                      </div>
+                      <Toggle label="Partner shop" sub="Pay automatically when the runner confirms" checked={editing.isPartner} onChange={(v) => setEditing({ ...editing, isPartner: v })} />
+                    </>
+                  ) : null}
                   <Toggle label="Visible to residents" sub="Hide temporarily without deleting" checked={editing.isActive} onChange={(v) => setEditing({ ...editing, isActive: v })} />
                   <Button
                     size="lg"

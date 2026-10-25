@@ -81,8 +81,9 @@ export function Tracker({ initial }: { initial: OrderView }) {
   }, [order.status, order.rating]);
 
   useEffect(() => {
-    if (params.get("paid") === "1") toast.success("Payment received", "We're finding you a runner now.");
-    else if (params.get("new") === "1") toast.success("Errand placed", "We're finding you a runner now.");
+    const next = initial.awaitingShop ? `We'll send a rider once ${initial.vendorName ?? "the shop"} confirms.` : "We're finding you a runner now.";
+    if (params.get("paid") === "1") toast.success("Payment received", next);
+    else if (params.get("new") === "1") toast.success("Errand placed", next);
     if (params.get("paid") || params.get("new")) router.replace(`/orders/${initial.id}`, { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -289,10 +290,10 @@ export function Tracker({ initial }: { initial: OrderView }) {
           <div className="card flex items-center gap-3.5 p-4">
             <Avatar name={order.runner.name} size={50} />
             <div className="min-w-0 flex-1">
-              <p className="truncate font-display text-[17px] font-semibold text-ink">{order.runner.name}</p>
-              <div className="flex items-center gap-2 text-[12.5px] text-muted">
+              <p className="truncate font-display text-[17px] font-semibold text-ink">{order.runner.firstName || order.runner.name}</p>
+              <div className="mt-0.5 flex items-center gap-2 whitespace-nowrap">
                 <StarRating value={order.runner.rating} />
-                {order.runner.tag ? <span>· Bag {order.runner.tag}</span> : null}
+                {order.runner.tag ? <span className="rounded-md bg-sunken px-1.5 py-0.5 text-[11px] font-semibold text-ink-2">Bag {order.runner.tag}</span> : null}
               </div>
             </div>
             {["assigned", "to_vendor", "at_vendor", "on_the_way", "arrived"].includes(order.status) ? (

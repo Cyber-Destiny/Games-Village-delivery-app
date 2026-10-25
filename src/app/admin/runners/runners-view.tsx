@@ -116,7 +116,7 @@ export function RunnersView({ runners }: { runners: AdminRunner[] }) {
               {r.bank ? `Pays to ${r.bank.accountName} · ${r.bank.bankName}` : "No payout account yet"}
             </p>
 
-            <div className="mt-4 flex gap-2 pt-1">
+            <div className="mt-4 flex flex-wrap gap-2 pt-1">
               <Button size="sm" variant="secondary" onClick={() => open(r)}>
                 <Pencil className="size-3.5" /> Edit
               </Button>

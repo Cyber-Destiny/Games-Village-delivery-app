@@ -39,7 +39,7 @@ export function AccountView({
   const set = (k: keyof Profile) => (e: React.ChangeEvent<HTMLInputElement>) => setV((s) => ({ ...s, [k]: e.target.value }));
 
   return (
-    <main className="safe-top px-5 pb-36 pt-4">
+    <main className="safe-pt-4 px-5 pb-36">
       <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center pt-4 text-center">
         <Avatar name={profile.name} size={84} />
         <h1 className="mt-4 font-display text-[26px] font-bold text-ink">{profile.name}</h1>
@@ -71,7 +71,7 @@ export function AccountView({
 
       <section className="mt-4 divide-y divide-line overflow-hidden rounded-[22px] border border-line/70 bg-surface shadow-[var(--shadow-card)]">
         <Row icon={<CircleHelp className="size-5" />} label="How it works" sub="Fees, refunds, delivery codes" href="/#how" />
-        <Row icon={<ShieldCheck className="size-5" />} label={`The ${APP_NAME} promise`} sub="Pay in the app, you're covered" href="/#how" />
+        <Row icon={<ShieldCheck className="size-5" />} label={`The ${APP_NAME} promise`} sub="Pay in the app, you're covered" href="/#promise" />
         <Row icon={<FileText className="size-5" />} label="Terms of Service" sub="Including dealings outside the app" href="/terms" />
         <Row icon={<Lock className="size-5" />} label="Privacy Policy" sub="What we collect and why" href="/privacy" />
       </section>

@@ -11,7 +11,7 @@ export default async function LoginPage() {
   const user = await getCurrentUser();
   if (user) redirect(needsOnboarding(user) ? "/welcome" : homeFor(user));
   return (
-    <AuthShell title="Your estate errands, sorted." subtitle="Sign in with your email to start an errand, track it live and get your change back instantly.">
+    <AuthShell title="Your estate errands, sorted." subtitle="Sign in with your email to chat with shops, book a rider and track your errand live.">
       <LoginForm supportPhone={(await getSettings()).supportPhone} />
     </AuthShell>
   );

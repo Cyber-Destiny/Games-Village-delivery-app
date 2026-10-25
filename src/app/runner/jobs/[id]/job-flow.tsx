@@ -93,7 +93,7 @@ export function JobFlow({ initial, commissionPct }: { initial: OrderView; commis
         <PageHeader
           back="/runner"
           title={`#${o.code}`}
-          subtitle={cat.label}
+          subtitle={o.collectAs ? "Collect a paid order" : cat.label}
           right={
             o.status !== "delivered" && o.status !== "cancelled" && o.status !== "assigned" ? (
               <div className="flex items-center gap-2">
@@ -291,7 +291,7 @@ function NewJob({ o, earn }: { o: OrderView; earn: number }) {
           </div>
         </div>
         <div className="space-y-3 p-5">
-          <Line icon={<Store className="size-4" />} label="From" value={o.kind === "pickup" ? o.pickupFrom ?? "—" : o.vendorName ?? "Any shop in the estate"} />
+          <Line icon={<Store className="size-4" />} label="From" value={o.kind === "pickup" ? o.pickupFrom ?? o.vendorName ?? "—" : o.vendorName ?? "Any shop in the estate"} />
           <Line icon={<MapPin className="size-4" />} label="To" value={o.deliverTo ?? `Block ${o.drop.block}, House ${o.drop.house}`} />
           <Line icon={<Receipt className="size-4" />} label="Spending limit" value={limit ? naira(limit) : o.collectAs ? "Nothing — the resident paid the shop" : "Nothing to buy"} />
         </div>
@@ -314,7 +314,7 @@ function Line({ icon, label, value }: { icon: React.ReactNode; label: string; va
 }
 
 function WhereToGo({ o }: { o: OrderView }) {
-  const where = o.kind === "pickup" ? o.pickupFrom : o.vendorName;
+  const where = o.kind === "pickup" ? o.pickupFrom ?? o.vendorName : o.vendorName;
   const eyebrow =
     o.category === "gas" && o.status === "to_vendor"
       ? "First collect the cylinder, then"

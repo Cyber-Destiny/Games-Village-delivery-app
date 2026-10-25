@@ -116,7 +116,7 @@ export function OrdersTable({ rows, filter, q }: { rows: AdminOrderRow[]; filter
                     <td className="px-3 py-3 text-ink-2">{r.runner ?? <span className="text-faint">—</span>}</td>
                     <td className="px-3 py-3">
                       <span className="flex items-center gap-2">
-                        <StatusBadge status={r.status} />
+                        <StatusBadge status={r.status} label={r.awaitingShop ? "Waiting for shop" : undefined} />
                         {r.rating ? (
                           <span className="inline-flex items-center gap-0.5 text-[12px] font-semibold text-ink-2">
                             <Star className="size-3 fill-accent text-accent" />

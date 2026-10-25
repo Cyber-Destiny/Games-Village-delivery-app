@@ -16,7 +16,7 @@ const PAYOUT_TONE = { success: "success", manual: "success", processing: "accent
 
 export function EarningsView({ state, data }: { state: RunnerState; data: Data }) {
   return (
-    <main className="safe-top px-5 pb-36 pt-4">
+    <main className="safe-pt-4 px-5 pb-36">
       <h1 className="mb-5 font-display text-[30px] font-bold text-ink">Earnings</h1>
 
       <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-[28px] bg-hero p-6 text-hero-ink shadow-[var(--shadow-raised)]">

@@ -83,7 +83,9 @@ export function SettingsView({ initial, status }: { initial: Settings; status: S
               checked={s.runnerBuys}
               onChange={(v) => setS({ ...s, runnerBuys: v })}
             />
-            <Row label="Pay partner shops automatically" sub="Turn off to approve every shop transfer yourself" checked={s.autoPayPartnerVendors} onChange={(v) => setS({ ...s, autoPayPartnerVendors: v })} />
+            {s.runnerBuys ? (
+              <Row label="Pay partner shops automatically" sub="Turn off to approve every shop transfer yourself" checked={s.autoPayPartnerVendors} onChange={(v) => setS({ ...s, autoPayPartnerVendors: v })} />
+            ) : null}
           </Panel>
 
           <Panel title="Residents" bodyClass="space-y-4 p-5">

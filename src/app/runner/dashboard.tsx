@@ -84,7 +84,7 @@ export function RunnerDashboard({ name, initial }: { name: string; initial: Runn
   const weekProgress = s.week.target ? Math.min(1, s.week.jobs / s.week.target) : 0;
 
   return (
-    <main className="safe-top px-5 pb-36 pt-4">
+    <main className="safe-pt-4 px-5 pb-36">
       <header className="flex items-start justify-between">
         <div>
           <p className="text-[14px] text-muted">Runner</p>
@@ -214,7 +214,7 @@ export function RunnerDashboard({ name, initial }: { name: string; initial: Runn
 function ActiveJobCard({ job }: { job: NonNullable<RunnerState["activeJob"]> }) {
   const isNew = job.status === "assigned";
   const left = useCountdown(isNew ? job.at.assigned : null, 180);
-  const where = job.kind === "pickup" ? job.pickupFrom : job.vendorName ?? "Any shop";
+  const where = job.kind === "pickup" ? job.pickupFrom ?? job.vendorName : job.vendorName ?? "Any shop";
   return (
     <Link href={`/runner/jobs/${job.id}`}>
       <motion.div

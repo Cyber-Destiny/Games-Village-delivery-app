@@ -57,7 +57,7 @@ export function OrdersList({ orders }: { orders: OrderCardData[] }) {
                       {formatDate(o.createdAt)}, {formatTime(o.createdAt)}
                     </p>
                     <div className="mt-1.5 flex items-center justify-between">
-                      <StatusBadge status={o.status} />
+                      <StatusBadge status={o.status} label={o.awaitingShop ? "Waiting for shop" : undefined} />
                       {o.status === "delivered" && !o.rated ? <span className="text-[12px] font-semibold text-primary">Rate ★</span> : null}
                     </div>
                   </div>

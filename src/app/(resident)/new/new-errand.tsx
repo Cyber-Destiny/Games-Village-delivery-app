@@ -701,7 +701,9 @@ export function NewErrand(props: Props) {
               </section>
 
               <section className="rounded-[24px] bg-surface p-4 shadow-[var(--shadow-card)] ring-1 ring-line/60">
-                <Row label={kind === "buy" ? "Items budget" : "To pay on collection"} value={naira(effectiveBudget)} hint={kind === "buy" ? "Change comes back to your wallet" : undefined} />
+                {kind === "buy" || effectiveBudget > 0 ? (
+                  <Row label={kind === "buy" ? "Items budget" : "To pay on collection"} value={naira(effectiveBudget)} hint={kind === "buy" ? "Change comes back to your wallet" : undefined} />
+                ) : null}
                 <Row
                   label="Service fee"
                   value={

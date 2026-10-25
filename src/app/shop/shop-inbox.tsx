@@ -49,8 +49,8 @@ export function ShopInbox({
   const unread = data.threads.reduce((a, t) => a + (t.unread ? 1 : 0), 0);
 
   return (
-    <main className="pb-16">
-      <header className="safe-top px-5 pt-4">
+    <main className="overflow-x-clip pb-16">
+      <header className="safe-pt-4 px-5">
         <div className="flex items-center gap-3">
           <span className="relative block size-12 shrink-0 overflow-hidden rounded-[14px] bg-sunken">
             <Photo src={shopPhoto(shop)} sizes="96px" />
@@ -78,7 +78,7 @@ export function ShopInbox({
 
       <AnimatePresence mode="wait" initial={false}>
         {tab === "chats" ? (
-          <motion.section key="chats" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="mt-4 px-5">
+          <motion.section key="chats" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.15 }} className="mt-4 px-5">
             {data.threads.length ? (
               <ul className="divide-y divide-line overflow-hidden rounded-[20px] border border-line bg-surface">
                 {data.threads.map((t) => (
@@ -106,7 +106,7 @@ export function ShopInbox({
             )}
           </motion.section>
         ) : (
-          <motion.section key="riders" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="mt-4 px-5">
+          <motion.section key="riders" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.15 }} className="mt-4 px-5">
             {data.pickups.length ? (
               <ul className="space-y-3">
                 {data.pickups.map((p) => (

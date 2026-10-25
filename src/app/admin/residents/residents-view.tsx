@@ -100,7 +100,7 @@ export function ResidentsView({ residents, q }: { residents: AdminResident[]; q:
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-ink-2">{r.block ? `Block ${r.block}, ${r.house}` : "—"}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-ink-2">{r.block ? `Block ${r.block}, ${r.house}` : "—"}</td>
                     <td className="tnum px-3 py-3 text-right font-medium text-ink">{r.orders}</td>
                     <td className="tnum px-3 py-3 text-right text-ink-2">{naira(r.spend)}</td>
                     <td className="tnum px-3 py-3 text-right text-ink-2">{naira(r.wallet)}</td>

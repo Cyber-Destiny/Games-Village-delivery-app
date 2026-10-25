@@ -15,6 +15,7 @@ import {
   type OrderStatus,
 } from "./db/schema";
 import { ACTIVE_STATUSES, RUNNER_ACTIVE_STATUSES } from "./orders/status";
+import { getSettings } from "./settings";
 import { supportWaiting } from "./support";
 import { lagosDateKey, startOfDay, weekStart } from "./time";
 
@@ -128,7 +129,8 @@ export async function getOverview() {
       status: o.status as OrderStatus,
       category: o.category,
       title: summarize(o.items, o.notes),
-      place: o.kind === "pickup" ? o.pickupFrom : o.vendorName,
+      place: o.kind === "pickup" ? o.pickupFrom || o.vendorName : o.vendorName,
+      awaitingShop: o.status === "searching" && !!o.collectAs && !o.shopConfirmedAt,
       block: o.dropBlock,
       runner: runnerName ? first(runnerName) : null,
       resident: first(residentName),
@@ -158,6 +160,7 @@ export async function getOverview() {
     },
     runners: { online: runnersOnline?.n ?? 0, total: runnersTotal?.n ?? 0 },
     topShops: topShops.map((s) => ({ name: s.name ?? "Any shop", n: s.n })),
+    runnerBuys: (await getSettings()).runnerBuys,
   };
 }
 
@@ -211,7 +214,8 @@ export async function listAdminOrders(filter: OrderFilter, q: string) {
     status: o.status as OrderStatus,
     category: o.category,
     title: summarize(o.items, o.notes),
-    place: o.kind === "pickup" ? o.pickupFrom : o.vendorName,
+    place: o.kind === "pickup" ? o.pickupFrom || o.vendorName : o.vendorName,
+      awaitingShop: o.status === "searching" && !!o.collectAs && !o.shopConfirmedAt,
     resident: residentName ?? residentPhone,
     block: o.dropBlock,
     house: o.dropHouse,

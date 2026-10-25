@@ -176,27 +176,31 @@ function MoneyRow({ label, value, muted }: { label: React.ReactNode; value: Reac
   );
 }
 
-export function Timeline({ events, defaultOpen = false }: { events: OrderView["events"]; defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
+/** Order activity. `collapsible={false}` drops the toggle header, for when the parent already titles it. */
+export function Timeline({ events, defaultOpen = false, collapsible = true }: { events: OrderView["events"]; defaultOpen?: boolean; collapsible?: boolean }) {
+  const [toggled, setOpen] = useState(defaultOpen);
+  const open = !collapsible || toggled;
   const list = useMemo(() => [...events].reverse(), [events]);
   return (
     <div>
-      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between py-1 text-left">
-        <span className="font-display text-[16px] font-semibold text-ink">Activity</span>
-        <motion.span animate={{ rotate: open ? 180 : 0 }}>
-          <ChevronDown className="size-5 text-muted" />
-        </motion.span>
-      </button>
+      {collapsible ? (
+        <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center justify-between py-1 text-left">
+          <span className="font-display text-[16px] font-semibold text-ink">Activity</span>
+          <motion.span animate={{ rotate: open ? 180 : 0 }}>
+            <ChevronDown className="size-5 text-muted" />
+          </motion.span>
+        </button>
+      ) : null}
       <AnimatePresence initial={false}>
         {open ? (
-          <motion.ol
-            initial={{ height: 0, opacity: 0 }}
+          <motion.div
+            initial={collapsible ? { height: 0, opacity: 0 } : false}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease }}
             className="overflow-hidden"
           >
-            <div className="relative ml-2 mt-3 border-l-2 border-line pl-5">
+            <ol className={cn("relative ml-2 border-l-2 border-line pl-5", collapsible && "mt-3")}>
               {list.map((e, i) => (
                 <li key={e.id} className="relative pb-4 last:pb-1">
                   <span className={cn("absolute -left-[27px] top-1 size-3 rounded-full ring-4 ring-surface", i === 0 ? "bg-primary" : "bg-line-strong")} />
@@ -204,8 +208,8 @@ export function Timeline({ events, defaultOpen = false }: { events: OrderView["e
                   <p className="text-[12px] text-muted">{formatTime(e.createdAt)}</p>
                 </li>
               ))}
-            </div>
-          </motion.ol>
+            </ol>
+          </motion.div>
         ) : null}
       </AnimatePresence>
     </div>

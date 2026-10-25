@@ -327,6 +327,16 @@
   padding-top: env(safe-area-inset-top);
 }
 
+/* Notch inset plus normal top padding: safe-pt-4 = inset + 1rem. (safe-top + pt-4 would let one override the other.) */
+@utility safe-pt-* {
+  padding-top: calc(env(safe-area-inset-top) + var(--spacing) * --value(integer));
+}
+
+/* At least N of bottom padding, more if the home indicator needs it. */
+@utility safe-pb-* {
+  padding-bottom: max(env(safe-area-inset-bottom), var(--spacing) * --value(integer));
+}
+
 @utility dotted-bg {
   background-image: radial-gradient(color-mix(in oklab, var(--ink) 9%, transparent) 1px, transparent 1px);
   background-size: 18px 18px;

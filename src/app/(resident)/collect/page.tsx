@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/dal";
 import { paidOrderCount } from "@/lib/orders/service";
 import { getShops } from "@/lib/resident";
+import { formatHours } from "@/lib/time";
 import { getSettings, isOpenNow } from "@/lib/settings";
 import { CollectForm } from "./collect-form";
 
@@ -23,7 +24,7 @@ export default async function CollectPage({ searchParams }: { searchParams: Prom
       paidCount={paidCount}
       walletBalance={user.walletBalance}
       open={isOpenNow(s)}
-      hours={`${s.openTime}–${s.closeTime}`}
+      hours={formatHours(s.openTime, s.closeTime)}
       name={user.name ?? ""}
       address={{ block: user.block ?? "", house: user.house ?? "", street: user.street ?? "", landmark: user.landmark ?? "" }}
     />

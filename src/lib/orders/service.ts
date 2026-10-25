@@ -37,7 +37,7 @@ import { applyTransferOutcome, reconcileProcessingPayouts, sendTransfer, settleM
 import { getSettings, isOpenNow } from "../settings";
 import { postCollectNotice, staffIds } from "../shop-chat";
 import { computeQuote } from "./quote";
-import { weekStart } from "../time";
+import { formatHours, weekStart } from "../time";
 import { walletCredit, walletDebit } from "../wallet";
 import { RESIDENT_CANCELLABLE, RUNNER_ACTIVE_STATUSES, type OrderStatus } from "./status";
 
@@ -136,7 +136,7 @@ export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export async function createOrder(user: User, raw: CreateOrderInput): Promise<{ orderId: string; payUrl: string | null }> {
   const input = createOrderSchema.parse(raw);
   const s = await getSettings();
-  if (!isOpenNow(s)) throw new UserError(`We're closed right now. Errands run ${s.openTime}–${s.closeTime}.`);
+  if (!isOpenNow(s)) throw new UserError(`We're closed right now. Errands run ${formatHours(s.openTime, s.closeTime)}.`);
 
   const category = getCategory(input.category);
   const items = input.items.filter((i) => i.name.trim());
@@ -191,7 +191,7 @@ export async function createOrder(user: User, raw: CreateOrderInput): Promise<{ 
           vendorId: vendor?.id ?? null,
           vendorName: vendor?.name ?? input.vendorName ?? null,
           vendorLocation: vendor?.location ?? input.vendorLocation ?? null,
-          pickupFrom: input.pickupFrom ?? null,
+          pickupFrom: input.pickupFrom ?? (collectAs && vendor ? vendor.name : null),
           deliverTo: input.deliverTo ?? null,
           collectAs,
           items,
@@ -236,7 +236,7 @@ export async function createOrder(user: User, raw: CreateOrderInput): Promise<{ 
     if (quote.toPay === 0) {
       await setStatus(tx, created, "searching", { paidAt: new Date() });
       await tx.update(users).set({ lastOrderAt: new Date() }).where(eq(users.id, user.id));
-      await addEvent(tx, created.id, "paid", "Paid from wallet");
+      await addEvent(tx, created.id, "paid", quote.walletApplied > 0 ? "Paid from wallet" : quote.loyaltyFree ? "Free delivery (loyalty reward)" : "Nothing to pay");
       return { order: created, ref: null as string | null };
     }
 

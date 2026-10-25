@@ -15,6 +15,7 @@ import type { OrderCardData } from "@/lib/orders/queries";
 import { milestoneIndex, statusCopy, STATUS_LABEL } from "@/lib/orders/status";
 import type { Shop } from "@/lib/resident";
 import type { ResidentThread } from "@/lib/shop-chat";
+import { formatHours } from "@/lib/time";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -194,7 +195,7 @@ export function HomeView({
 
   return (
     <motion.main variants={stagger} initial="hidden" animate="show" className="pb-36">
-      <motion.header variants={rise} className="safe-top flex items-center justify-between gap-4 px-5 pt-3">
+      <motion.header variants={rise} className="safe-pt-3 flex items-center justify-between gap-4 px-5">
         <Link href="/account" className="min-w-0">
           <p className="text-[12px] font-medium text-muted">Deliver to</p>
           <p className="flex items-center gap-1 truncate text-[15px] font-semibold text-ink">
@@ -213,7 +214,7 @@ export function HomeView({
 
       {!data.open ? (
         <motion.p variants={rise} className="mt-1.5 flex items-center gap-1.5 px-5 text-[13.5px] text-muted">
-          <Clock3 className="size-4" /> Closed now. Errands run {data.openTime}–{data.closeTime}.
+          <Clock3 className="size-4" /> Closed now. Errands run {formatHours(data.openTime, data.closeTime)}.
         </motion.p>
       ) : null}
 

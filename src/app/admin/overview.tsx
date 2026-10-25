@@ -100,7 +100,11 @@ export function OverviewView({ initial }: { initial: Overview }) {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Delivered today" value={String(o.today.delivered)} delta={{ value: o.today.delivered - o.yesterday.delivered, vs: "yesterday" }} />
         <Stat label="Fee revenue today" value={naira(o.today.revenue)} delta={{ value: o.today.revenue - o.yesterday.revenue, vs: "yesterday", format: naira }} />
-        <Stat label="Spent at shops today" value={naira(o.today.gmv)} hint="Paid directly to vendors" />
+        {o.runnerBuys ? (
+          <Stat label="Spent at shops today" value={naira(o.today.gmv)} hint="Paid directly to vendors" />
+        ) : (
+          <Stat label="Errands running" value={String(o.live.length)} hint="Right now" />
+        )}
         <Stat label="Avg. time to deliver" value={o.today.avgMins ? `${o.today.avgMins} min` : "—"} hint="From payment to door, today" />
       </div>
 
@@ -189,7 +193,7 @@ export function OverviewView({ initial }: { initial: Overview }) {
                         <Timer className="size-3.5" /> {l.ageMins} min
                       </span>
                     )}
-                    <StatusBadge status={l.status} />
+                    <StatusBadge status={l.status} label={l.awaitingShop ? "Waiting for shop" : undefined} />
                   </Link>
                 </motion.li>
               ))}

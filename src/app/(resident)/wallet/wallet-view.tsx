@@ -37,7 +37,7 @@ export function WalletView({ data }: { data: WalletData }) {
   const pendingWithdrawals = data.withdrawals.filter((w) => w.status === "pending_approval" || w.status === "processing");
 
   return (
-    <main className="safe-top px-5 pb-36 pt-4">
+    <main className="safe-pt-4 px-5 pb-36">
       <h1 className="mb-5 font-display text-[30px] font-bold text-ink">Wallet</h1>
 
       <motion.section
