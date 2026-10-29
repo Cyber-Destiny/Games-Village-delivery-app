@@ -15,6 +15,7 @@ import {
   type Order,
   type User,
 } from "../db/schema";
+import { isStaff } from "../auth/roles";
 import { UserError } from "../errors";
 import { getSettings } from "../settings";
 import { startOfDay, weekStart } from "../time";
@@ -29,7 +30,7 @@ const iso = (d: Date | null | undefined) => (d ? d.toISOString() : null);
 export type OrderView = Awaited<ReturnType<typeof buildOrderView>>;
 
 async function buildOrderView(order: Order, viewer: Viewer) {
-  const isAdmin = viewer.role === "admin";
+  const isAdmin = isStaff(viewer); // admins and support agents see the staff view
   const isResident = viewer.id === order.residentId;
   const isRunner = viewer.id === order.runnerId;
 
@@ -160,7 +161,7 @@ export async function getOrderForViewer(orderId: string, viewer: Viewer) {
   if (!/^[0-9a-f-]{36}$/i.test(orderId)) throw new UserError("Errand not found.");
   const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
   if (!order) throw new UserError("Errand not found.");
-  const allowed = viewer.role === "admin" || order.residentId === viewer.id || order.runnerId === viewer.id;
+  const allowed = isStaff(viewer) || order.residentId === viewer.id || order.runnerId === viewer.id;
   if (!allowed) throw new UserError("Errand not found.");
   return buildOrderView(order, viewer);
 }
@@ -332,7 +333,7 @@ async function assertParticipant(orderId: string, viewer: Viewer) {
     .from(orders)
     .where(eq(orders.id, orderId));
   if (!o) throw new UserError("Errand not found.");
-  if (viewer.role !== "admin" && viewer.id !== o.residentId && viewer.id !== o.runnerId) throw new UserError("Errand not found.");
+  if (!isStaff(viewer) && viewer.id !== o.residentId && viewer.id !== o.runnerId) throw new UserError("Errand not found.");
   return o;
 }
 
@@ -358,7 +359,7 @@ export async function listMessages(orderId: string, viewer: Viewer) {
     id: m.id,
     body: m.body,
     mine: m.senderId === viewer.id,
-    sender: role === "admin" ? "Support" : firstName(name) || (role === "runner" ? "Runner" : "Resident"),
+    sender: isStaff({ role }) ? "Support" : firstName(name) || (role === "runner" ? "Runner" : "Resident"),
     senderRole: role,
     createdAt: m.createdAt.toISOString(),
     read: !!m.readAt,
@@ -372,7 +373,7 @@ export async function postMessage(orderId: string, viewer: Viewer, body: string)
   const text = body.trim().slice(0, 600);
   if (!text) throw new UserError("Type a message.");
   const closed = o.status === "cancelled" || (o.status === "delivered" && o.deliveredAt && Date.now() - o.deliveredAt.getTime() > 24 * 3600 * 1000);
-  if (closed && viewer.role !== "admin") throw new UserError("This chat is closed.");
+  if (closed && !isStaff(viewer)) throw new UserError("This chat is closed.");
   const [m] = await db.insert(messages).values({ orderId, senderId: viewer.id, body: text }).returning();
   return { recipientIds: [o.residentId, o.runnerId].filter((id): id is string => !!id && id !== viewer.id), message: m };
 }

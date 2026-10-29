@@ -3,6 +3,8 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
 const COOKIE = "runam_session";
+/** This device's push subscription id, so signing out stops its alerts. */
+export const PUSH_COOKIE = "runam_push";
 const MAX_AGE = 60 * 60 * 24 * 60; // 60 days
 
 type Payload = { uid: string; v: number };

@@ -4,6 +4,7 @@ import { BellRing } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
+import { cn } from "@/lib/cn";
 
 const PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
@@ -30,7 +31,15 @@ export function usePush() {
 
   useEffect(() => {
     if (!supported) return;
-    navigator.serviceWorker.ready.then((reg) => reg.pushManager.getSubscription()).then((s) => setEnabled(!!s)).catch(() => {});
+    // The browser may still hold a subscription from whoever signed in before, so ask the server whose it is.
+    navigator.serviceWorker.ready
+      .then((reg) => reg.pushManager.getSubscription())
+      .then(async (s) => {
+        if (!s) return setEnabled(false);
+        const res = await fetch(`/api/push?endpoint=${encodeURIComponent(s.endpoint)}`);
+        setEnabled(res.ok ? !!(await res.json()).subscribed : true);
+      })
+      .catch(() => {});
   }, [supported]);
 
   async function enable() {
@@ -73,19 +82,20 @@ export function usePush() {
   return { supported, enabled, busy, enable, disable };
 }
 
-export function PushToggle({ description }: { description: string }) {
+/** `unsupportedHint` shows instead of the switch where this browser can't do push (e.g. iPhone outside the Home Screen app). */
+export function PushToggle({ description, unsupportedHint, className }: { description: string; unsupportedHint?: string; className?: string }) {
   const push = usePush();
-  if (!push.supported) return null;
+  if (!push.supported && !unsupportedHint) return null;
   return (
-    <div className="flex items-center gap-3.5 px-4 py-3.5">
+    <div className={cn("flex items-center gap-3.5 px-4 py-3.5", className)}>
       <span className="grid size-10 place-items-center rounded-xl bg-accent-soft text-accent-soft-ink">
         <BellRing className="size-5" />
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-[15px] font-semibold text-ink">Notifications</p>
-        <p className="text-[12.5px] text-muted">{description}</p>
+        <p className="text-[12.5px] text-muted">{push.supported ? description : unsupportedHint}</p>
       </div>
-      <Switch checked={push.enabled} disabled={push.busy} onChange={(v) => (v ? push.enable() : push.disable())} label="Notifications" />
+      {push.supported ? <Switch checked={push.enabled} disabled={push.busy} onChange={(v) => (v ? push.enable() : push.disable())} label="Notifications" /> : null}
     </div>
   );
 }

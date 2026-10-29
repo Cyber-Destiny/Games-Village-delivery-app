@@ -1,11 +1,13 @@
 import "server-only";
 import { and, asc, count, desc, eq, gte, ilike, inArray, isNull, lt, ne, or, sql, sum } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { adminEmails } from "./auth/admins";
 import { db } from "./db";
 import {
   messages,
   orders,
   payouts,
+  pushSubscriptions,
   runnerEarnings,
   runnerProfiles,
   topups,
@@ -166,9 +168,10 @@ export async function getOverview() {
 
 export type Overview = Awaited<ReturnType<typeof getOverview>>;
 
-export async function getAdminBadges() {
+/** Counts on the console's tabs. Support agents don't see payouts, so `withMoney` is false for them. */
+export async function getAdminBadges(withMoney = true) {
   const [[p], [stuck], support] = await Promise.all([
-    db.select({ n: count() }).from(payouts).where(eq(payouts.status, "pending_approval")),
+    withMoney ? db.select({ n: count() }).from(payouts).where(eq(payouts.status, "pending_approval")) : [{ n: 0 }],
     db
       .select({ n: count() })
       .from(orders)
@@ -410,3 +413,25 @@ export async function getResidentsAdmin(q: string) {
 }
 
 export type AdminResident = Awaited<ReturnType<typeof getResidentsAdmin>>[number];
+
+// ── team ─────────────────────────────────────────────────────
+
+/** Admins (from ADMIN_EMAILS) and support agents, with whether each has alerts on. */
+export async function getTeam() {
+  const emails = adminEmails();
+  const [adminRows, agents, alerts] = await Promise.all([
+    emails.length ? db.select({ id: users.id, email: users.email, name: users.name, role: users.role }).from(users).where(inArray(users.email, emails)) : [],
+    db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(eq(users.role, "support")).orderBy(asc(users.name)),
+    db.selectDistinct({ userId: pushSubscriptions.userId }).from(pushSubscriptions),
+  ]);
+  const alertsOn = new Set(alerts.map((a) => a.userId));
+  return {
+    admins: emails.map((email) => {
+      const u = adminRows.find((r) => r.email === email);
+      return { email, name: u?.name ?? null, signedIn: u?.role === "admin", alerts: !!u && alertsOn.has(u.id) };
+    }),
+    agents: agents.map((a) => ({ ...a, alerts: alertsOn.has(a.id) })),
+  };
+}
+
+export type Team = Awaited<ReturnType<typeof getTeam>>;

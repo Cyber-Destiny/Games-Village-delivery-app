@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { homeFor, requireUser } from "@/lib/auth/dal";
+import { isStaff } from "@/lib/auth/roles";
 import { formatHours } from "@/lib/time";
 import { getSettings } from "@/lib/settings";
 import { supportChat } from "@/lib/support";
@@ -10,7 +11,7 @@ export const metadata: Metadata = { title: "Support" };
 
 export default async function SupportPage({ searchParams }: { searchParams: Promise<{ about?: string }> }) {
   const user = await requireUser();
-  if (user.role === "admin") redirect("/admin/support");
+  if (isStaff(user)) redirect("/admin/support");
   const [initial, s, { about }] = await Promise.all([supportChat(user), getSettings(), searchParams]);
   const code = about && /^[A-Z0-9]{3,10}$/i.test(about) ? about.toUpperCase() : null;
   return (

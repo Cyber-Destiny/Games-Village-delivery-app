@@ -71,6 +71,13 @@
       "when": 1792882900506,
       "tag": "0009_shop_confirm",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793270714687,
+      "tag": "0010_support_role",
+      "breakpoints": true
     }
   ]
 }

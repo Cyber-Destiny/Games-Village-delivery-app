@@ -1,5 +1,6 @@
 import { eq, or } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth/dal";
+import { isStaff } from "@/lib/auth/roles";
 import { db } from "@/lib/db";
 import { orders, uploads, vendors } from "@/lib/db/schema";
 
@@ -10,7 +11,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const [file] = await db.select().from(uploads).where(eq(uploads.id, id));
   if (!file) return new Response("Not found", { status: 404 });
 
-  let allowed = user.role === "admin" || file.ownerId === user.id;
+  let allowed = isStaff(user) || file.ownerId === user.id;
   if (!allowed) {
     // Shop cover photos are shown to everyone who's signed in.
     const [shop] = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.image, `/api/uploads/${id}`)).limit(1);

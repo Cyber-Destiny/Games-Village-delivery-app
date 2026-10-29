@@ -1,5 +1,6 @@
 import "server-only";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { isStaff, STAFF_ROLES } from "./auth/roles";
 import { APP_NAME } from "./brand";
 import { db } from "./db";
 import { supportMessages, supportThreads, users, vendors, type User } from "./db/schema";
@@ -66,11 +67,12 @@ async function loadMessages(threadId: string, viewer: "user" | "support"): Promi
   }));
 }
 
+/** Everyone who answers support: admins and support agents. */
 async function adminIds() {
   const rows = await db
     .select({ id: users.id })
     .from(users)
-    .where(and(eq(users.role, "admin"), eq(users.isActive, true)));
+    .where(and(inArray(users.role, [...STAFF_ROLES]), eq(users.isActive, true)));
   return rows.map((r) => r.id);
 }
 
@@ -84,7 +86,7 @@ export async function supportChat(user: User) {
 }
 
 export async function supportSend(user: User, body: string) {
-  if (user.role === "admin") throw new UserError("Reply from the Support tab in the admin console.");
+  if (isStaff(user)) throw new UserError("Reply from the Support tab in the admin console.");
   const text = clean(body);
   const [thread] = await db
     .insert(supportThreads)

@@ -4,6 +4,7 @@ import { MessagesSquare } from "lucide-react";
 import Link from "next/link";
 import useSWR from "swr";
 import { AdminHeader, EmptyRow, Panel } from "@/components/admin/ui";
+import { PushToggle } from "@/components/app/push";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/cn";
 import { formatPhoneLocal } from "@/lib/phone";
@@ -24,6 +25,11 @@ export function SupportInbox({ initial, phone }: { initial: SupportInboxRow[]; p
             {phone ? <>Calls and WhatsApp go to {formatPhoneLocal(phone)}.</> : <>Add a support phone in Settings for calls and WhatsApp.</>}
           </>
         }
+      />
+      <PushToggle
+        className="card mb-6"
+        description="Get an alert on this device when a customer messages support or asks for help on an errand."
+        unsupportedHint="This browser can't show alerts. On iPhone, add runam.app to your Home Screen and open it from there."
       />
       <Panel title={waiting ? `${waiting} waiting for a reply` : "All conversations"}>
         {threads.length === 0 ? (

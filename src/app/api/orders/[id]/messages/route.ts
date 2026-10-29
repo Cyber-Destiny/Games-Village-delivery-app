@@ -1,5 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { json, withUser } from "@/lib/api";
+import { isStaff, STAFF_ROLES } from "@/lib/auth/roles";
 import { db } from "@/lib/db";
 import { orders, users } from "@/lib/db/schema";
 import { notify } from "@/lib/notify";
@@ -17,7 +18,7 @@ export const POST = withUser<Ctx>(async (req, user, { params }) => {
   const body = (await req.json().catch(() => ({}))) as { body?: string };
   const { message } = await postMessage(id, user, String(body.body ?? ""));
   const [o] = await db.select({ residentId: orders.residentId, runnerId: orders.runnerId, code: orders.code }).from(orders).where(eq(orders.id, id));
-  const sender = user.role === "admin" ? "Support" : (user.name ?? "").split(" ")[0] || "New message";
+  const sender = isStaff(user) ? "Support" : (user.name ?? "").split(" ")[0] || "New message";
   const preview = message.body.slice(0, 120);
 
   const jobs: Promise<void>[] = [];
@@ -27,9 +28,9 @@ export const POST = withUser<Ctx>(async (req, user, { params }) => {
   if (o.runnerId && o.runnerId !== user.id) {
     jobs.push(notify(o.runnerId, { title: sender, body: preview, url: `/runner/jobs/${id}?chat=1`, tag: `chat-${id}` }));
   }
-  // No runner yet means the resident is asking support — let the admins know.
+  // No runner yet means the resident is asking support — let the admins and support agents know.
   if (user.role === "resident" && !o.runnerId) {
-    const admins = await db.select({ id: users.id }).from(users).where(eq(users.role, "admin"));
+    const admins = await db.select({ id: users.id }).from(users).where(and(inArray(users.role, [...STAFF_ROLES]), eq(users.isActive, true)));
     jobs.push(notify(admins.map((a) => a.id), { title: `Support request #${o.code}`, body: preview, url: `/admin/orders/${id}` }));
   }
   await Promise.all(jobs);

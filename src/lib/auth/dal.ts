@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { users, type Role, type User } from "../db/schema";
+import { isListedAdmin } from "./admins";
 import { readSession } from "./session";
 
 export const getCurrentUser = cache(async (): Promise<User | null> => {
@@ -11,11 +12,14 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
   if (!session) return null;
   const [user] = await db.select().from(users).where(eq(users.id, session.uid));
   if (!user || !user.isActive || user.sessionVersion !== session.v) return null;
+  // Taken off ADMIN_EMAILS → signed out now, not at their next sign-in (which then makes them a resident).
+  if (user.role === "admin" && !isListedAdmin(user.email)) return null;
   return user;
 });
 
 export function homeFor(user: Pick<User, "role">): string {
   if (user.role === "admin") return "/admin";
+  if (user.role === "support") return "/admin/support";
   if (user.role === "runner") return "/runner";
   if (user.role === "vendor") return "/shop";
   return "/home";

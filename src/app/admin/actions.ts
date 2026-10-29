@@ -3,7 +3,9 @@
 import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { isListedAdmin } from "@/lib/auth/admins";
 import { assertRole } from "@/lib/auth/dal";
+import { STAFF_ROLES } from "@/lib/auth/roles";
 import { isCategoryId } from "@/lib/categories";
 import { db, type Tx } from "@/lib/db";
 import { orders, runnerProfiles, users, vendorItems, vendors, type VendorContact } from "@/lib/db/schema";
@@ -29,20 +31,22 @@ import { assertPhoneFree } from "@/lib/users";
 import type { Settings } from "@/lib/settings-shared";
 
 const admin = () => assertRole("admin");
+/** Errand actions: admins and support agents. Everything else on this page is admin-only. */
+const staffUser = () => assertRole(...STAFF_ROLES);
 const done = (...paths: string[]) => paths.forEach((p) => revalidatePath(p));
 
 // ── orders ───────────────────────────────────────────────────
 
 export async function reassignOrder(orderId: string, runnerId: string | null) {
   return attempt(async () => {
-    await adminReassign(await admin(), orderId, runnerId);
+    await adminReassign(await staffUser(), orderId, runnerId);
     done("/admin", `/admin/orders/${orderId}`);
   });
 }
 
 export async function cancelOrder(orderId: string, reason: string, refund: number) {
   return attempt(async () => {
-    await cancelByAdmin(await admin(), orderId, reason, refund);
+    await cancelByAdmin(await staffUser(), orderId, reason, refund);
     done("/admin", `/admin/orders/${orderId}`);
   });
 }
@@ -50,14 +54,14 @@ export async function cancelOrder(orderId: string, reason: string, refund: numbe
 /** After phoning the shop: their payment arrived, so send a rider. */
 export async function confirmForShop(orderId: string) {
   return attempt(async () => {
-    await confirmShopPayment(await admin(), orderId, true);
+    await confirmShopPayment(await staffUser(), orderId, true);
     done("/admin", `/admin/orders/${orderId}`);
   });
 }
 
 export async function markDelivered(orderId: string) {
   return attempt(async () => {
-    await adminMarkDelivered(await admin(), orderId);
+    await adminMarkDelivered(await staffUser(), orderId);
     done("/admin", `/admin/orders/${orderId}`);
   });
 }
@@ -146,6 +150,7 @@ export async function saveRunner(input: z.infer<typeof runnerSchema>) {
       if (!userId) {
         const [existing] = await tx.select().from(users).where(eq(users.email, email));
         if (existing && existing.role === "admin") throw new UserError("That email belongs to an admin.");
+        if (existing && existing.role === "support") throw new UserError("That email belongs to a support agent. Remove them from Team first.");
         if (existing?.vendorId) throw new UserError("That email belongs to a shop's staff. Remove them from the shop first.");
         await assertPhoneFree(phone, existing?.id ?? null, tx);
         if (existing) {
@@ -265,8 +270,8 @@ async function syncShopStaff(tx: Tx, vendorId: string, shopName: string, staff: 
       await tx.insert(users).values({ email: c.email, name: c.label || shopName, role: "vendor", vendorId });
       continue;
     }
-    if (u.role === "admin" || u.role === "runner") {
-      throw new UserError(`${c.email} belongs to a${u.role === "admin" ? "n admin" : " runner"} account.`);
+    if (u.role === "admin" || u.role === "runner" || u.role === "support") {
+      throw new UserError(`${c.email} belongs to ${u.role === "admin" ? "an admin" : u.role === "support" ? "a support agent" : "a runner"} account.`);
     }
     if (u.vendorId && u.vendorId !== vendorId) throw new UserError(`${c.email} already works for another shop.`);
     await tx
@@ -349,5 +354,52 @@ export async function saveSettings(next: Settings) {
     }
     await persistSettings({ ...next, supportPhone: phone ?? "", announcement: next.announcement.trim().slice(0, 200) });
     done("/admin/settings", "/home", "/");
+  });
+}
+
+// ── team ─────────────────────────────────────────────────────
+
+const agentSchema = z.object({
+  name: z.string().trim().min(2, "Enter their name").max(60),
+  email: z.string().trim(),
+});
+
+/** A support agent signs in with this email and sees only Errands and Support. */
+export async function addSupportAgent(input: z.infer<typeof agentSchema>) {
+  return attempt(async () => {
+    await admin();
+    const parsed = agentSchema.safeParse(input);
+    if (!parsed.success) throw new UserError(parsed.error.issues[0]?.message ?? "Check the details.");
+    const email = normalizeEmail(parsed.data.email);
+    if (!email) throw new UserError("Enter a valid email. It's how they sign in.");
+    if (isListedAdmin(email)) throw new UserError("That email is already an admin.");
+    const [existing] = await db.select().from(users).where(eq(users.email, email));
+    if (!existing) {
+      await db.insert(users).values({ email, name: parsed.data.name, role: "support" });
+    } else {
+      if (existing.role === "support") throw new UserError("They're already a support agent.");
+      if (existing.role === "runner") throw new UserError("That email belongs to a runner. Use another email for support.");
+      if (existing.vendorId) throw new UserError("That email is a shop's staff login. Remove it from the shop first.");
+      // A resident account becomes a support account and is signed out of the resident app.
+      await db
+        .update(users)
+        .set({ role: "support", name: parsed.data.name, isActive: true, sessionVersion: sql`${users.sessionVersion} + 1` })
+        .where(eq(users.id, existing.id));
+    }
+    done("/admin/team");
+  });
+}
+
+/** Back to an ordinary resident account, signed out everywhere straight away. */
+export async function removeSupportAgent(userId: string) {
+  return attempt(async () => {
+    await admin();
+    const [u] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId));
+    if (u?.role !== "support") throw new UserError("Support agent not found.");
+    await db
+      .update(users)
+      .set({ role: "resident", sessionVersion: sql`${users.sessionVersion} + 1` })
+      .where(eq(users.id, userId));
+    done("/admin/team");
   });
 }

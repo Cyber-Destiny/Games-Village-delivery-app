@@ -16,6 +16,7 @@ import {
   type Order,
   type User,
 } from "../db/schema";
+import { isStaff } from "../auth/roles";
 import { APP_NAME } from "../brand";
 import { getCategory, isCategoryId } from "../categories";
 import { UserError } from "../errors";
@@ -933,10 +934,10 @@ export async function confirmShopPayment(user: User, orderId: string, received: 
   const res = await db.transaction(async (tx) => {
     const o = await lockOrder(tx, orderId);
     if (!o.collectAs || !o.vendorId) throw new UserError("This errand doesn't need a shop confirmation.");
-    if (user.role !== "admin" && user.vendorId !== o.vendorId) throw new UserError("Errand not found.");
+    if (!isStaff(user) && user.vendorId !== o.vendorId) throw new UserError("Errand not found.");
     if (o.shopConfirmedAt) return { o, changed: false };
     if (o.status !== "searching") throw new UserError(o.status === "cancelled" ? "This errand was cancelled." : "This errand has moved on already.");
-    const by = user.role === "admin" ? "Runam (on the shop's behalf)" : o.vendorName ?? "The shop";
+    const by = isStaff(user) ? "Runam (on the shop's behalf)" : o.vendorName ?? "The shop";
     if (received) {
       await tx.update(orders).set({ shopConfirmedAt: new Date(), updatedAt: new Date() }).where(eq(orders.id, o.id));
       await addEvent(tx, o.id, "shop_confirmed", `${by} confirmed the payment`, user.id);

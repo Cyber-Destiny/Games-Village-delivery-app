@@ -25,7 +25,8 @@ const bytea = customType<{ data: Buffer; driverData: Buffer }>({
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 const ts = (name: string) => timestamp(name, { withTimezone: true });
 
-export const roleEnum = pgEnum("role", ["resident", "runner", "admin", "vendor"]);
+// support = a support agent: answers support chats and handles errands, no access to money, people or settings.
+export const roleEnum = pgEnum("role", ["resident", "runner", "admin", "vendor", "support"]);
 
 export const orderStatusEnum = pgEnum("order_status", [
   "awaiting_payment",

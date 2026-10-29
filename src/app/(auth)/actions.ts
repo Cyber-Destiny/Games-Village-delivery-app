@@ -1,27 +1,21 @@
 "use server";
 
-import { eq, sql } from "drizzle-orm";
-import { headers } from "next/headers";
+import { and, eq, sql } from "drizzle-orm";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { isListedAdmin } from "@/lib/auth/admins";
 import { getCurrentUser, homeFor, needsOnboarding } from "@/lib/auth/dal";
 import { requestOtp, verifyOtp } from "@/lib/auth/otp";
-import { createSession, destroySession } from "@/lib/auth/session";
+import { createSession, destroySession, PUSH_COOKIE } from "@/lib/auth/session";
 import { APP_NAME } from "@/lib/brand";
 import { db } from "@/lib/db";
-import { runnerProfiles, users } from "@/lib/db/schema";
+import { pushSubscriptions, runnerProfiles, users } from "@/lib/db/schema";
 import { normalizeEmail } from "@/lib/email-address";
 import { attempt, UserError } from "@/lib/errors";
 import { formatPhoneLocal, normalizePhone } from "@/lib/phone";
 import { getSettings } from "@/lib/settings";
 import { assertPhoneFree } from "@/lib/users";
-
-function adminEmails(): string[] {
-  return (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => normalizeEmail(e))
-    .filter((e): e is string => !!e);
-}
 
 async function clientIp() {
   const h = await headers();
@@ -46,7 +40,7 @@ export async function verifyCode(rawEmail: string, code: string) {
     if (!res.ok) throw new UserError(res.error);
 
     // ADMIN_EMAILS is the single source of truth for who is an admin.
-    const isAdmin = adminEmails().includes(email);
+    const isAdmin = isListedAdmin(email);
     let [user] = await db.select().from(users).where(eq(users.email, email));
     if (!user) {
       [user] = await db
@@ -116,6 +110,14 @@ export async function completeProfile(input: z.infer<typeof profileSchema>) {
 }
 
 export async function signOut() {
+  // Stop this device's alerts for the person signing out (shared phones, the front desk).
+  const jar = await cookies();
+  const pushId = jar.get(PUSH_COOKIE)?.value;
+  const user = await getCurrentUser();
+  if (pushId && user && /^[0-9a-f-]{36}$/i.test(pushId)) {
+    await db.delete(pushSubscriptions).where(and(eq(pushSubscriptions.id, pushId), eq(pushSubscriptions.userId, user.id)));
+  }
+  jar.delete(PUSH_COOKIE);
   await destroySession();
   redirect("/login");
 }

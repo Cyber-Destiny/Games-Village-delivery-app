@@ -110,7 +110,7 @@ export function ChatSheet({
                     <div
                       className={cn(
                         "max-w-[82%] rounded-[20px] px-4 py-2.5 text-[15px] leading-snug",
-                        m.mine ? "rounded-br-md bg-primary text-primary-ink" : m.senderRole === "admin" ? "rounded-bl-md bg-accent-soft text-accent-soft-ink" : "rounded-bl-md bg-sunken text-ink",
+                        m.mine ? "rounded-br-md bg-primary text-primary-ink" : m.senderRole === "admin" || m.senderRole === "support" ? "rounded-bl-md bg-accent-soft text-accent-soft-ink" : "rounded-bl-md bg-sunken text-ink",
                       )}
                     >
                       {m.body}
