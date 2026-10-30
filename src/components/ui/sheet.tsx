@@ -34,6 +34,13 @@ export function Sheet({
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // Callers pass a new onClose every render; keep it in a ref so typing (which re-renders them)
+  // doesn't re-run the open effect below and pull focus off the field, closing the phone keyboard.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
@@ -41,16 +48,20 @@ export function Sheet({
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && dismissible) onClose();
+      if (e.key === "Escape" && dismissible) onCloseRef.current();
     };
     window.addEventListener("keydown", onKey);
-    const t = setTimeout(() => panelRef.current?.focus(), 50);
+    // Move focus into the sheet once, as it opens, unless something inside already has it.
+    const t = setTimeout(() => {
+      const panel = panelRef.current;
+      if (panel && !panel.contains(document.activeElement)) panel.focus();
+    }, 50);
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
       clearTimeout(t);
     };
-  }, [open, onClose, dismissible]);
+  }, [open, dismissible]);
 
   if (!mounted) return null;
 

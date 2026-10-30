@@ -150,6 +150,7 @@ export function ChatSheet({
             onChange={(e) => setText(e.target.value)}
             disabled={disabled}
             placeholder={disabled ? "This chat is closed" : "Message…"}
+            aria-label="Message"
             className="h-12 flex-1 rounded-full border border-line bg-surface-2 px-5 text-[16px] outline-none focus:border-primary"
           />
           <motion.button
