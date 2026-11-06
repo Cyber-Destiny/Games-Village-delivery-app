@@ -1,27 +1,31 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Banknote, Pencil, Plus, ShieldCheck, Star, UserX, UserCheck } from "lucide-react";
+import { Banknote, Camera, IdCard, Pencil, Plus, ShieldCheck, Star, UserX, UserCheck, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { BankFields, emptyBank, type BankValue } from "@/components/app/bank-form";
 import { AdminHeader } from "@/components/admin/ui";
+import { Photo } from "@/components/brand/photo";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Sheet } from "@/components/ui/sheet";
+import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import type { AdminRunner } from "@/lib/admin";
 import { cn } from "@/lib/cn";
 import { naira } from "@/lib/money";
 import { formatPhoneLocal } from "@/lib/phone";
 import { timeAgo } from "@/lib/time";
+import { uploadPhoto } from "@/lib/upload-client";
 import { payRunnerNow, saveRunner, setRunnerActive } from "../actions";
 
-type Form = { id: string | null; name: string; email: string; phone: string; tag: string; nin: string; guarantorName: string; guarantorPhone: string };
-const blank: Form = { id: null, name: "", email: "", phone: "", tag: "", nin: "", guarantorName: "", guarantorPhone: "" };
+type Form = { id: string | null; name: string; email: string; phone: string; tag: string; nin: string; guarantorName: string; guarantorPhone: string; idDocuments: string[] };
+const blank: Form = { id: null, name: "", email: "", phone: "", tag: "", nin: "", guarantorName: "", guarantorPhone: "", idDocuments: [] };
+const MAX_ID_PHOTOS = 6;
 
 export function RunnersView({ runners }: { runners: AdminRunner[] }) {
   const router = useRouter();
@@ -43,6 +47,7 @@ export function RunnersView({ runners }: { runners: AdminRunner[] }) {
             nin: r.nin ?? "",
             guarantorName: r.guarantorName ?? "",
             guarantorPhone: r.guarantorPhone ? "0" + r.guarantorPhone.replace(/^234/, "") : "",
+            idDocuments: r.idDocuments,
           }
         : blank,
     );
@@ -92,6 +97,11 @@ export function RunnersView({ runners }: { runners: AdminRunner[] }) {
               ) : (
                 <span className="text-[12px] font-medium text-accent-soft-ink">Missing NIN / guarantor</span>
               )}
+              {r.idDocuments.length ? (
+                <span className="inline-flex items-center gap-1 text-[12px] font-medium text-muted">
+                  <IdCard className="size-3.5" /> ID on file
+                </span>
+              ) : null}
             </div>
 
             <dl className="mt-4 grid grid-cols-3 gap-2 rounded-2xl bg-surface-2 p-3 text-center">
@@ -182,6 +192,7 @@ export function RunnersView({ runners }: { runners: AdminRunner[] }) {
             <Field label="Guarantor phone">
               <Input value={form.guarantorPhone} onChange={set("guarantorPhone")} inputMode="tel" />
             </Field>
+            <IdPhotos ids={form.idDocuments} onChange={(idDocuments) => setForm((f) => (f ? { ...f, idDocuments } : f))} />
             <div className="rounded-2xl bg-surface-2 p-4 sm:col-span-2">
               <p className="mb-1 text-[14px] font-semibold text-ink">Payout account</p>
               <p className="mb-3 text-[12.5px] text-muted">{current?.bank ? `Currently ${current.bank.accountName} · ${current.bank.bankName}. Fill in to change.` : "Where their earnings are sent."}</p>
@@ -208,5 +219,77 @@ export function RunnersView({ runners }: { runners: AdminRunner[] }) {
         ) : null}
       </Sheet>
     </>
+  );
+}
+
+/** Photos of a rider's ID (NIN slip, ID card, guarantor's letter). Stored privately; only admins can open them. */
+function IdPhotos({ ids, onChange }: { ids: string[]; onChange: (ids: string[]) => void }) {
+  const [busy, setBusy] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+
+  const add = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setBusy(true);
+    const added: string[] = [];
+    try {
+      for (const file of Array.from(files).slice(0, MAX_ID_PHOTOS - ids.length)) {
+        added.push((await uploadPhoto(file, { purpose: "id_document" })).id);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      if (added.length) onChange([...ids, ...added]);
+      setBusy(false);
+      if (input.current) input.current.value = "";
+    }
+  };
+
+  return (
+    <div className="rounded-2xl bg-surface-2 p-4 sm:col-span-2">
+      <div className="mb-3 flex items-start gap-2.5">
+        <IdCard className="mt-0.5 size-4 shrink-0 text-primary" />
+        <div>
+          <p className="text-[14px] font-semibold text-ink">ID documents</p>
+          <p className="text-[12.5px] leading-relaxed text-muted">
+            Photos of their NIN slip or ID card, and the guarantor&apos;s letter. Only admins can see them. Tap one to open it full size.
+          </p>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+        {ids.map((id, i) => (
+          <div key={id} className="relative aspect-[4/3] overflow-hidden rounded-xl bg-sunken ring-1 ring-line">
+            <a href={`/api/uploads/${id}`} target="_blank" rel="noreferrer" aria-label={`Open ID photo ${i + 1}`} className="absolute inset-0">
+              <Photo src={`/api/uploads/${id}`} alt={`ID photo ${i + 1}`} sizes="160px" />
+            </a>
+            <button
+              type="button"
+              onClick={() => onChange(ids.filter((x) => x !== id))}
+              aria-label={`Remove ID photo ${i + 1}`}
+              className="absolute right-1 top-1 grid size-7 place-items-center rounded-full bg-black/60 text-white"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        ))}
+        {ids.length < MAX_ID_PHOTOS ? (
+          <button
+            type="button"
+            onClick={() => input.current?.click()}
+            disabled={busy}
+            className="grid aspect-[4/3] place-items-center rounded-xl border border-dashed border-line-strong text-[12.5px] font-medium text-muted transition-colors hover:bg-sunken/60 disabled:opacity-60"
+          >
+            {busy ? (
+              <Spinner className="size-4" />
+            ) : (
+              <span className="flex flex-col items-center gap-1">
+                <Camera className="size-4" /> Add photo
+              </span>
+            )}
+          </button>
+        ) : null}
+      </div>
+      {ids.length ? <p className="mt-2 text-[12px] text-muted">Removed photos are deleted when you save.</p> : null}
+      <input ref={input} type="file" accept="image/*" multiple hidden onChange={(e) => add(e.target.files)} />
+    </div>
   );
 }

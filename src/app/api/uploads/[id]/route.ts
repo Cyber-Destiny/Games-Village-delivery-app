@@ -11,6 +11,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const [file] = await db.select().from(uploads).where(eq(uploads.id, id));
   if (!file) return new Response("Not found", { status: 404 });
 
+  // A rider's ID photo: admins only (not support agents), and never cached on the device.
+  if (file.purpose === "id_document") {
+    if (user.role !== "admin") return new Response("Not found", { status: 404 });
+    return new Response(new Uint8Array(file.data), {
+      headers: { "Content-Type": file.mime, "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" },
+    });
+  }
+
   let allowed = isStaff(user) || file.ownerId === user.id;
   if (!allowed) {
     // Shop cover photos are shown to everyone who's signed in.

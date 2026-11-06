@@ -287,6 +287,7 @@ export async function getRunners() {
       nin: p.nin,
       guarantorName: p.guarantorName,
       guarantorPhone: p.guarantorPhone,
+      idDocuments: p.idDocuments,
       bank: p.accountNumber ? { bankName: p.bankName, accountNumber: p.accountNumber, accountName: p.accountName, bankCode: p.bankCode } : null,
       rating: p.ratingCount ? p.ratingSum / p.ratingCount : null,
       ratingCount: p.ratingCount,

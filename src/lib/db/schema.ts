@@ -112,6 +112,8 @@ export const runnerProfiles = pgTable("runner_profiles", {
   ratingSum: integer("rating_sum").notNull().default(0),
   ratingCount: integer("rating_count").notNull().default(0),
   tag: text("tag"), // vest / bag number
+  // Upload ids of their ID photos (NIN slip, ID card, guarantor letter). Only admins can open them.
+  idDocuments: jsonb("id_documents").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   createdAt: createdAt(),
 });
 
@@ -398,6 +400,7 @@ export const uploads = pgTable("uploads", {
   mime: text("mime").notNull(),
   size: integer("size").notNull(),
   data: bytea("data").notNull(),
+  purpose: text("purpose"), // "id_document" = a rider's ID photo; only admins can open it
   createdAt: createdAt(),
 });
 

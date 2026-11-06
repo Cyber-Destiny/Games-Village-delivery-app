@@ -9,6 +9,9 @@ const TYPES = ["image/jpeg", "image/png", "image/webp"];
 export const POST = withUser(async (req, user) => {
   const form = await req.formData();
   const file = form.get("file");
+  // Riders' ID photos are uploaded by admins and only admins can open them.
+  const purpose = form.get("purpose") === "id_document" ? "id_document" : null;
+  if (purpose && user.role !== "admin") throw new UserError("Only admins can upload ID documents.");
   if (!(file instanceof File)) throw new UserError("No photo received.");
   if (!TYPES.includes(file.type)) throw new UserError("Please upload a JPG, PNG or WebP photo.");
   if (file.size > MAX) throw new UserError("That photo is too large.");
@@ -16,7 +19,7 @@ export const POST = withUser(async (req, user) => {
   if (!matchesImageType(data, file.type)) throw new UserError("That file isn't a valid photo.");
   const [row] = await db
     .insert(uploads)
-    .values({ ownerId: user.id, mime: file.type, size: file.size, data })
+    .values({ ownerId: user.id, mime: file.type, size: file.size, data, purpose })
     .returning({ id: uploads.id });
   return json({ id: row.id, url: `/api/uploads/${row.id}` });
 });

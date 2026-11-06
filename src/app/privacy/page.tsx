@@ -42,8 +42,9 @@ export default async function PrivacyPage() {
             ratings, your wallet balance and history, and your chats with runners, shops and our support team.
           </p>
           <p>
-            <strong>Runners:</strong> your name, email and phone number, National Identification Number (NIN), your guarantor&apos;s name and phone number, your bank account for
-            payouts, the errands you run, receipt photos, ratings and earnings.
+            <strong>Runners:</strong> your name, email and phone number, National Identification Number (NIN), photos of your ID and your guarantor&apos;s letter, your
+            guarantor&apos;s name and phone number, your bank account for payouts, the errands you run, receipt photos, ratings and earnings. Only {APP_NAME} admins can see
+            your ID photos.
           </p>
           <p>
             <strong>Shop staff:</strong> your name, email and the shop you work for, and the chats you have with customers.
@@ -143,7 +144,7 @@ export default async function PrivacyPage() {
           <li>Your account details, for as long as your account is open.</li>
           <li>Errand, payment, wallet and payout records, for as long as Nigerian law requires us to keep financial records (generally up to six years).</li>
           <li>Chats and call records, while your account is open and for a reasonable time afterwards to settle any disputes.</li>
-          <li>Runner vetting details (NIN and guarantor), while the runner works with us and for one year afterwards.</li>
+          <li>Runner vetting details (NIN, ID photos and guarantor), while the runner works with us and for one year afterwards.</li>
           <li>Sign-in codes, only as a scrambled (hashed) value that expires within minutes.</li>
         </ul>
       ),

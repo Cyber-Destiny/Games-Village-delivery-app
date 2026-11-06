@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { isListedAdmin } from "@/lib/auth/admins";
@@ -8,7 +8,7 @@ import { assertRole } from "@/lib/auth/dal";
 import { STAFF_ROLES } from "@/lib/auth/roles";
 import { isCategoryId } from "@/lib/categories";
 import { db, type Tx } from "@/lib/db";
-import { orders, runnerProfiles, users, vendorItems, vendors, type VendorContact } from "@/lib/db/schema";
+import { orders, runnerProfiles, uploads, users, vendorItems, vendors, type VendorContact } from "@/lib/db/schema";
 import { attempt, UserError } from "@/lib/errors";
 import {
   adminCreditWallet,
@@ -122,6 +122,7 @@ const runnerSchema = z.object({
   nin: z.string().trim().max(20),
   guarantorName: z.string().trim().max(60),
   guarantorPhone: z.string().trim().max(20),
+  idDocuments: z.array(z.string().uuid()).max(6, "Up to 6 ID photos.").default([]),
   bank: z.object({ bankCode: z.string(), bankName: z.string(), accountNumber: z.string(), accountName: z.string().max(100).nullable().optional() }).nullable(),
 });
 
@@ -136,6 +137,11 @@ export async function saveRunner(input: z.infer<typeof runnerSchema>) {
     const phone = normalizePhone(v.phone);
     if (!phone) throw new UserError("Enter a valid Nigerian phone number.");
     if (v.nin && !/^\d{11}$/.test(v.nin)) throw new UserError("NIN must be 11 digits.");
+    const docs = [...new Set(v.idDocuments)];
+    if (docs.length) {
+      const found = await db.select({ id: uploads.id }).from(uploads).where(and(inArray(uploads.id, docs), eq(uploads.purpose, "id_document")));
+      if (found.length !== docs.length) throw new UserError("One of the ID photos didn't upload. Remove it and add it again.");
+    }
 
     let bank: { bankCode: string; bankName: string; accountNumber: string; accountName: string } | null = null;
     if (v.bank?.accountNumber) {
@@ -171,7 +177,12 @@ export async function saveRunner(input: z.infer<typeof runnerSchema>) {
           .set({ name: v.name, email, phone, ...(before?.email !== email ? { sessionVersion: sql`${users.sessionVersion} + 1` } : {}) })
           .where(eq(users.id, userId));
       }
+      // Photos taken off the list are deleted, not just unlinked.
+      const [prev] = await tx.select({ docs: runnerProfiles.idDocuments }).from(runnerProfiles).where(eq(runnerProfiles.userId, userId!));
+      const dropped = (prev?.docs ?? []).filter((d) => !docs.includes(d));
+      if (dropped.length) await tx.delete(uploads).where(and(inArray(uploads.id, dropped), eq(uploads.purpose, "id_document")));
       const profile = {
+        idDocuments: docs,
         tag: v.tag || null,
         nin: v.nin || null,
         guarantorName: v.guarantorName || null,

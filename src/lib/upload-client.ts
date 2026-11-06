@@ -17,10 +17,12 @@ async function compress(file: File, maxSide = 1600, quality = 0.82): Promise<Blo
   return blob ?? file;
 }
 
-export async function uploadPhoto(file: File): Promise<{ id: string; url: string }> {
-  const blob = await compress(file);
+/** `purpose: "id_document"` keeps more detail so the text stays readable, and makes the photo admin-only. */
+export async function uploadPhoto(file: File, opts: { purpose?: "id_document" } = {}): Promise<{ id: string; url: string }> {
+  const blob = opts.purpose === "id_document" ? await compress(file, 2000, 0.88) : await compress(file);
   const body = new FormData();
   body.append("file", new File([blob], "photo.jpg", { type: blob.type || "image/jpeg" }));
+  if (opts.purpose) body.append("purpose", opts.purpose);
   const res = await fetch("/api/uploads", { method: "POST", body });
   const json = await res.json().catch(() => null);
   if (!res.ok) throw new Error(json?.error || "Upload failed");

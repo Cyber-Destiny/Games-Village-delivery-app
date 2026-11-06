@@ -78,6 +78,13 @@
       "when": 1793270714687,
       "tag": "0010_support_role",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793961506785,
+      "tag": "0011_rider_id_documents",
+      "breakpoints": true
     }
   ]
 }
