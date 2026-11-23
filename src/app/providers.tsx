@@ -2,6 +2,7 @@
 
 import { MotionConfig } from "motion/react";
 import { SWRConfig } from "swr";
+import { InstallPrompt } from "@/components/app/install-prompt";
 import { ServiceWorker } from "@/components/app/push";
 import { Toaster } from "@/components/ui/toast";
 
@@ -23,6 +24,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         {children}
         <Toaster />
         <ServiceWorker />
+        <InstallPrompt />
       </SWRConfig>
     </MotionConfig>
   );

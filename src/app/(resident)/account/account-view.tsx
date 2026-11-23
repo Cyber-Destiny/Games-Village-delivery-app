@@ -6,6 +6,7 @@ import { OffPlatformNote } from "@/components/legal/notes";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { InstallRow } from "@/components/app/install-prompt";
 import { PushToggle } from "@/components/app/push";
 import { SupportCard } from "@/components/support/support-card";
 import { Avatar } from "@/components/ui/avatar";
@@ -65,6 +66,7 @@ export function AccountView({
         <Row icon={<UserRound className="size-5" />} label="Personal details" sub={[profile.name, profile.phone.replace(/^(\d{4})(\d{3})(\d{4})$/, "$1 $2 $3")].filter(Boolean).join(" · ")} onClick={() => setEdit(true)} />
         <Row icon={<MapPin className="size-5" />} label="Delivery address" sub={[`Block ${profile.block}, House ${profile.house}`, profile.street].filter(Boolean).join(" · ")} onClick={() => setEdit(true)} />
         <PushToggle description="Know when your runner is on the way" />
+        <InstallRow />
       </section>
 
       {isAdmin ? null : <SupportCard phone={supportPhone} unread={supportUnread} className="mt-4" />}

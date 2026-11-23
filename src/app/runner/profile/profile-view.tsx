@@ -4,6 +4,7 @@ import { Landmark, LogOut, Pencil, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { BankFields, emptyBank, type BankValue } from "@/components/app/bank-form";
+import { InstallRow } from "@/components/app/install-prompt";
 import { PushToggle } from "@/components/app/push";
 import { LegalLinks } from "@/components/legal/notes";
 import { SupportCard } from "@/components/support/support-card";
@@ -65,6 +66,9 @@ export function ProfileView({
         </button>
         <div className="border-t border-line">
           <PushToggle description="Get alerted the second an errand comes in" />
+        </div>
+        <div className="border-t border-line">
+          <InstallRow />
         </div>
       </section>
 
