@@ -4,7 +4,7 @@ import { db } from "./db";
 import { orders, users, vendorItems, vendors, type User } from "./db/schema";
 import { ACTIVE_STATUSES } from "./orders/status";
 import { listResidentOrders } from "./orders/queries";
-import { paidOrderCount } from "./orders/service";
+import { paidOrderCount, ridersAvailable } from "./orders/service";
 import { getSettings, isOpenNow } from "./settings";
 import { residentThreads } from "./shop-chat";
 
@@ -43,7 +43,7 @@ export type Shop = Awaited<ReturnType<typeof getShops>>[number];
 
 export async function getResidentHome(user: User) {
   const s = await getSettings();
-  const [shops, recent, paidCount, active, chats] = await Promise.all([
+  const [shops, recent, paidCount, active, chats, riders] = await Promise.all([
     getShops(),
     listResidentOrders(user.id, 12),
     paidOrderCount(user.id),
@@ -52,10 +52,12 @@ export async function getResidentHome(user: User) {
       .from(orders)
       .where(and(eq(orders.residentId, user.id), inArray(orders.status, [...ACTIVE_STATUSES, "awaiting_payment"]))),
     residentThreads(user.id, 3),
+    ridersAvailable(),
   ]);
   const activeIds = new Set(active.map((a) => a.id));
   return {
     open: isOpenNow(s),
+    ridersAvailable: riders,
     openTime: s.openTime,
     closeTime: s.closeTime,
     announcement: s.announcement,

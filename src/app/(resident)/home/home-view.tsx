@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, ChevronDown, ChevronRight, Clock3, Megaphone, MessageCircle, RotateCcw, Search } from "lucide-react";
+import { ArrowRight, Bike, ChevronDown, ChevronRight, Clock3, Megaphone, MessageCircle, RotateCcw, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ShopContactSheet } from "@/components/app/shop-contact-sheet";
@@ -168,6 +168,7 @@ export function HomeView({
     open: boolean;
     openTime: string;
     closeTime: string;
+    ridersAvailable: boolean;
     announcement: string;
     loyaltyEvery: number;
     loyaltyProgress: number;
@@ -215,6 +216,10 @@ export function HomeView({
       {!data.open ? (
         <motion.p variants={rise} className="mt-1.5 flex items-center gap-1.5 px-5 text-[13.5px] text-muted">
           <Clock3 className="size-4" /> Closed now. Errands run {formatHours(data.openTime, data.closeTime)}.
+        </motion.p>
+      ) : !data.ridersAvailable ? (
+        <motion.p variants={rise} className="mt-1.5 flex items-center gap-1.5 px-5 text-[13.5px] text-muted">
+          <Bike className="size-4" /> No riders online right now. Check back in a few minutes.
         </motion.p>
       ) : null}
 

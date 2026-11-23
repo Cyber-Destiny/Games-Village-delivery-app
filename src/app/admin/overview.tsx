@@ -58,7 +58,7 @@ export function OverviewView({ initial }: { initial: Overview }) {
     o.alerts.failedPayouts ? { icon: CircleAlert, text: `${o.alerts.failedPayouts} failed transfer${o.alerts.failedPayouts > 1 ? "s" : ""}`, href: "/admin/payouts", tone: "danger" } : null,
     o.alerts.supportChats ? { icon: Headset, text: `${o.alerts.supportChats} support chat${o.alerts.supportChats > 1 ? "s" : ""} waiting for a reply`, href: "/admin/support", tone: "accent" } : null,
     o.alerts.unreadChats ? { icon: MessageCircle, text: `${o.alerts.unreadChats} unanswered errand message${o.alerts.unreadChats > 1 ? "s" : ""}`, href: "/admin/orders?filter=all", tone: "accent" } : null,
-    o.runners.online === 0 ? { icon: Bike, text: "No runners online right now", href: "/admin/runners", tone: "accent" } : null,
+    o.runners.online === 0 ? { icon: Bike, text: "No runners online, so residents can't place errands", href: "/admin/runners", tone: "danger" } : null,
   ].filter(Boolean) as Array<{ icon: typeof Wallet; text: string; href: string; tone: "danger" | "accent" }>;
 
   return (

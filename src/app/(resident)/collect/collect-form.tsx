@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Photo, shopPhoto } from "@/components/brand/photo";
+import { NoRidersNotice } from "@/components/app/no-riders";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
@@ -28,6 +29,7 @@ type Props = {
   paidCount: number;
   walletBalance: number;
   open: boolean;
+  ridersAvailable: boolean;
   hours: string;
   name: string;
   address: Address;
@@ -53,7 +55,9 @@ export function CollectForm(props: Props) {
 
   const error = !props.open
     ? `Closed right now · ${props.hours}`
-    : !collectAs.trim()
+    : !props.ridersAvailable
+      ? "No riders online"
+      : !collectAs.trim()
       ? "Add the name the order is under"
       : !addr.block.trim() || !addr.house.trim()
         ? "Add your block and house number"
@@ -99,6 +103,7 @@ export function CollectForm(props: Props) {
           <h1 className="flex-1 truncate font-display text-[19px] font-semibold">Send a rider</h1>
         </div>
       </header>
+      {props.open && !props.ridersAvailable ? <NoRidersNotice beforePayingShop /> : null}
 
       <motion.div initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.06 } } }} className="space-y-5 px-5 pt-2">
         <motion.section variants={rise}>

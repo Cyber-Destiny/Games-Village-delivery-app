@@ -138,6 +138,8 @@ export async function createOrder(user: User, raw: CreateOrderInput): Promise<{ 
   const input = createOrderSchema.parse(raw);
   const s = await getSettings();
   if (!isOpenNow(s)) throw new UserError(`We're closed right now. Errands run ${formatHours(s.openTime, s.closeTime)}.`);
+  // Don't take anyone's money when nobody could deliver it.
+  if (!(await ridersAvailable())) throw new UserError(NO_RIDERS);
 
   const category = getCategory(input.category);
   const items = input.items.filter((i) => i.name.trim());
@@ -460,6 +462,25 @@ async function tryAssign(orderId: string): Promise<"assigned" | "no-runners" | "
     });
   }
   return res.r;
+}
+
+export const NO_RIDERS = "No riders are online right now, so you haven't been charged. Please try again in a few minutes.";
+
+/** Whether any runner could take an errand now: online and heard from recently, the same rule dispatch uses. */
+export async function ridersAvailable(): Promise<boolean> {
+  const [r] = await db
+    .select({ n: count() })
+    .from(runnerProfiles)
+    .innerJoin(users, eq(users.id, runnerProfiles.userId))
+    .where(
+      and(
+        eq(runnerProfiles.online, true),
+        eq(users.isActive, true),
+        eq(users.role, "runner"),
+        gt(runnerProfiles.lastSeenAt, new Date(Date.now() - RUNNER_STALE_MS)),
+      ),
+    );
+  return (r?.n ?? 0) > 0;
 }
 
 /** Assigns waiting errands to free runners, oldest first. */

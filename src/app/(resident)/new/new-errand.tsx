@@ -20,6 +20,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { CategoryThumb, categoryPhoto, Photo, shopPhoto } from "@/components/brand/photo";
+import { NoRidersNotice } from "@/components/app/no-riders";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -60,6 +61,7 @@ type Props = {
   maxBudget: number;
   walletBalance: number;
   open: boolean;
+  ridersAvailable: boolean;
   hours: string;
   address: { block: string; house: string; street: string; landmark: string };
 };
@@ -260,6 +262,8 @@ export function NewErrand(props: Props) {
           <Info className="mt-0.5 size-4 shrink-0" />
           <p>We&apos;re closed right now ({props.hours}). You can plan your errand, but it can only be placed during opening hours.</p>
         </div>
+      ) : !props.ridersAvailable ? (
+        <NoRidersNotice />
       ) : null}
 
       <AnimatePresence mode="wait" custom={dir} initial={false}>
@@ -780,8 +784,8 @@ export function NewErrand(props: Props) {
                 </Button>
               </div>
             ) : step === 3 && quote ? (
-              <Button size="xl" block onClick={submit} loading={pending} disabled={!props.open}>
-                {!props.open ? "Closed right now" : quote.toPay === 0 ? "Place errand" : `Pay ${naira(quote.toPay)}`}
+              <Button size="xl" block onClick={submit} loading={pending} disabled={!props.open || !props.ridersAvailable}>
+                {!props.open ? "Closed right now" : !props.ridersAvailable ? "No riders online" : quote.toPay === 0 ? "Place errand" : `Pay ${naira(quote.toPay)}`}
               </Button>
             ) : null}
           </div>

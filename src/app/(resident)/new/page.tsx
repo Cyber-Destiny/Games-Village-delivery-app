@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth/dal";
 import { getCategory, isCategoryId, type CategoryId } from "@/lib/categories";
 import { db } from "@/lib/db";
 import { orders } from "@/lib/db/schema";
-import { paidOrderCount } from "@/lib/orders/service";
+import { paidOrderCount, ridersAvailable } from "@/lib/orders/service";
 import { getShops } from "@/lib/resident";
 import { formatHours } from "@/lib/time";
 import { getSettings, isOpenNow } from "@/lib/settings";
@@ -20,7 +20,7 @@ export default async function NewErrandPage({
 }) {
   const user = await requireRole("resident", "admin");
   const sp = await searchParams;
-  const [s, shops, paidCount] = await Promise.all([getSettings(), getShops(), paidOrderCount(user.id)]);
+  const [s, shops, paidCount, riders] = await Promise.all([getSettings(), getShops(), paidOrderCount(user.id), ridersAvailable()]);
 
   let prefill: Prefill = { category: isCategoryId(sp.category ?? "") ? (sp.category as CategoryId) : null };
 
@@ -78,6 +78,7 @@ export default async function NewErrandPage({
       maxBudget={s.maxBudget}
       walletBalance={user.walletBalance}
       open={isOpenNow(s)}
+      ridersAvailable={riders}
       hours={formatHours(s.openTime, s.closeTime)}
       address={{ block: user.block ?? "", house: user.house ?? "", street: user.street ?? "", landmark: user.landmark ?? "" }}
     />
